@@ -15,9 +15,33 @@
 }
 
 body {
-  background: var(--background);
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(to right, rgba(59, 130, 246, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 130, 246, 0.06) 1px, transparent 1px);
+  background-size: 20px 20px;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Notebook sheet: ruled lines + red margin, for guide-style pages */
+.notebook-sheet {
+  background-color: #fffdf4;
+  background-image:
+    linear-gradient(
+      90deg,
+      transparent 55px,
+      rgba(239, 68, 68, 0.45) 55px,
+      rgba(239, 68, 68, 0.45) 56px,
+      transparent 56px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 33px,
+      rgba(59, 130, 246, 0.14) 33px,
+      rgba(59, 130, 246, 0.14) 34px
+    );
 }
 
 @keyframes slide-in {
@@ -33,4 +57,29 @@ body {
 
 .animate-slide-in {
   animation: slide-in 0.3s ease-out;
+}
+
+/* Papier millimétré moderne — fond quadrillé discret pour la zone de
+   contenu principale uniquement (les cartes restent blanches par-dessus).
+   Rendu d'un cahier technique/ingénierie, sans texture réaliste ni vieillie. */
+.graph-paper {
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(to right, rgba(59, 130, 246, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 130, 246, 0.06) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+@media print {
+  aside,
+  header,
+  nav,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
 }

@@ -7,21 +7,30 @@ datasource db {
 }
 
 model User {
-  userId             Int          @id @default(autoincrement())
+  userId             Int                         @id @default(autoincrement())
   name               String
   lastname           String
   contact            String
-  status             Status       @default(ACTIVE)
-  email              String       @unique
-  role               Role         @default(INSTRUCTOR)
+  status             Status                      @default(ACTIVE)
+  email              String                      @unique
+  role               Role                        @default(INSTRUCTOR)
   password           String
   registrationNumber String?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
   account            Account[]
   sessions           Session[]
   assignments        Assignment[]
-  createdGrades      Grade[]      @relation("CreatedGrades")
+  createdGrades      Grade[]                     @relation("CreatedGrades")
+  studentProfile     Student?
+  guardianProfile    Guardian?
+  receivedPayments   Payment[]                   @relation("PaymentReceiver")
+  examDuties         ExamInvigilatorAssignment[]
+  notifications      NotificationRecipient[]
+  organizedEvents    SchoolEvent[]               @relation("EventOrganizer")
+  eventInvitations   EventRecipient[]
+  recordedAttendance Attendance[]                @relation("AttendanceRecorder")
+  validatedReports   ReportCard[]                @relation("ValidatedReportCards")
 }
 
 model Account {
@@ -58,17 +67,21 @@ model VerificationToken {
 }
 
 model SchoolYear {
-  schoolYearId Int          @id @default(autoincrement())
-  label        String
-  startDate    DateTime
-  endDate      DateTime
-  status       Status       @default(ACTIVE)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  class        Class[]
-  periods      Period[]
-  assignments  Assignment[]
-  schedules    Schedule[]
+  schoolYearId  Int            @id @default(autoincrement())
+  label         String
+  startDate     DateTime
+  endDate       DateTime
+  status        Status         @default(ACTIVE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  class         Class[]
+  periods       Period[]
+  assignments   Assignment[]
+  schedules     Schedule[]
+  examSessions  ExamSession[]
+  enrollments   Enrollment[]
+  feeStructures FeeStructure[]
+  events        SchoolEvent[]
 }
 
 model Period {
@@ -82,20 +95,25 @@ model Period {
   schoolYearId Int
   schoolYear   SchoolYear   @relation(fields: [schoolYearId], references: [schoolYearId])
   grades       Grade[]
+  assessments  Assessment[]
+  reportCards  ReportCard[]
 }
 
 model Class {
-  classId      Int          @id @default(autoincrement())
-  name         String
-  level        String
-  status       ClassStatus  @default(ACTIVE)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  schoolYearId Int
-  schoolYear   SchoolYear   @relation(fields: [schoolYearId], references: [schoolYearId])
-  courses      Course[]
-  students     Student[]
-  assignments  Assignment[]
+  classId       Int            @id @default(autoincrement())
+  name          String
+  level         String
+  status        ClassStatus    @default(ACTIVE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  schoolYearId  Int
+  schoolYear    SchoolYear     @relation(fields: [schoolYearId], references: [schoolYearId])
+  courses       Course[]
+  students      Student[]
+  assignments   Assignment[]
+  enrollments   Enrollment[]
+  feeStructures FeeStructure[]
+  events        SchoolEvent[]
 }
 
 model Course {
@@ -119,12 +137,14 @@ model Assignment {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  teacher    User       @relation(fields: [teacherId], references: [userId], onDelete: Cascade)
-  class      Class      @relation(fields: [classId], references: [classId], onDelete: Cascade)
-  course     Course     @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
-  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [schoolYearId], onDelete: Cascade)
-  grades     Grade[]
-  schedules  Schedule[]
+  teacher     User         @relation(fields: [teacherId], references: [userId], onDelete: Cascade)
+  class       Class        @relation(fields: [classId], references: [classId], onDelete: Cascade)
+  course      Course       @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+  schoolYear  SchoolYear   @relation(fields: [schoolYearId], references: [schoolYearId], onDelete: Cascade)
+  grades      Grade[]
+  schedules   Schedule[]
+  assessments Assessment[]
+  examSlots   ExamSlot[]
 
   @@unique([teacherId, classId, courseId, schoolYearId])
 }
@@ -138,18 +158,22 @@ model Grade {
   periodId     Int
   assignmentId Int
   createdById  Int
+  assessmentId Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  student    Student    @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
-  period     Period     @relation(fields: [periodId], references: [periodId], onDelete: Cascade)
-  assignment Assignment @relation(fields: [assignmentId], references: [assignmentId], onDelete: Cascade)
-  createdBy  User       @relation("CreatedGrades", fields: [createdById], references: [userId], onDelete: Cascade)
+  student    Student     @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  period     Period      @relation(fields: [periodId], references: [periodId], onDelete: Cascade)
+  assignment Assignment  @relation(fields: [assignmentId], references: [assignmentId], onDelete: Cascade)
+  createdBy  User        @relation("CreatedGrades", fields: [createdById], references: [userId], onDelete: Cascade)
+  assessment Assessment? @relation(fields: [assessmentId], references: [assessmentId], onDelete: SetNull)
+
+  @@unique([assessmentId, studentId])
 }
 
 model Student {
-  studentId          Int      @id @default(autoincrement())
-  registrationNumber String?  @unique
+  studentId          Int                  @id @default(autoincrement())
+  registrationNumber String?              @unique
   lastname           String
   firstname          String
   gender             Gender
@@ -158,12 +182,18 @@ model Student {
   address            String?
   parentPhone        String?
   parentEmail        String?
-  status             Status   @default(ACTIVE)
+  status             Status               @default(ACTIVE)
   classId            Int
-  class              Class    @relation(fields: [classId], references: [classId], onDelete: Cascade)
+  userId             Int?                 @unique
+  class              Class                @relation(fields: [classId], references: [classId], onDelete: Cascade)
+  user               User?                @relation(fields: [userId], references: [userId], onDelete: SetNull)
   grades             Grade[]
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  examAllocations    ExamRoomAllocation[]
+  enrollments        Enrollment[]
+  guardians          GuardianStudent[]
+  attendance         Attendance[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 }
 
 model SchoolSettings {
@@ -176,9 +206,18 @@ model SchoolSettings {
   updatedAt  DateTime @updatedAt
 }
 
+enum ReportCardStatus {
+  DRAFT
+  VALIDATED
+}
+
 enum Role {
+  SUPER_ADMIN
   ADMIN
+  ACCOUNTANT
   INSTRUCTOR
+  STUDENT
+  PARENT
 }
 
 enum Status {
@@ -215,19 +254,437 @@ enum DayOfWeek {
   SATURDAY
 }
 
+enum ExamDistributionType {
+  BY_CLASS
+  MIXED
+}
+
+enum EnrollmentStatus {
+  PENDING
+  ACTIVE
+  TRANSFERRED
+  WITHDRAWN
+  COMPLETED
+}
+
+enum AssessmentType {
+  QUIZ
+  HOMEWORK
+  PROJECT
+  EXAM
+  RESIT
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  CANCELLED
+  RESCHEDULED
+  COMPLETED
+}
+
+enum GuardianRelationship {
+  FATHER
+  MOTHER
+  GUARDIAN
+  OTHER
+}
+
+enum NotificationType {
+  GENERAL
+  SCHEDULE_CHANGE
+  COURSE_CANCELLED
+  EXAM_ROOM
+  GRADE_PUBLISHED
+  PAYMENT
+  PAYMENT_REMINDER
+  CONFERENCE
+  REPORT_CARD
+}
+
+enum NotificationAudience {
+  USER
+  CLASS
+  ROLE
+  SCHOOL
+}
+
+enum FeeFrequency {
+  ONCE
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_MONEY
+  CARD
+  CHEQUE
+  OTHER
+}
+
+enum SchoolEventType {
+  CONFERENCE
+  PARENT_MEETING
+  SCHOOL_EVENT
+  HOLIDAY
+}
+
+enum RsvpStatus {
+  PENDING
+  ATTENDING
+  DECLINED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model ExamSession {
+  examSessionId    Int                  @id @default(autoincrement())
+  title            String
+  startDate        DateTime
+  endDate          DateTime
+  distributionType ExamDistributionType @default(BY_CLASS)
+  schoolYearId     Int
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  schoolYear  SchoolYear           @relation(fields: [schoolYearId], references: [schoolYearId], onDelete: Cascade)
+  allocations ExamRoomAllocation[]
+  slots       ExamSlot[]
+
+  @@index([schoolYearId])
+}
+
+model ExamRoomAllocation {
+  allocationId  Int       @id @default(autoincrement())
+  examSessionId Int
+  studentId     Int
+  classroomId   Int
+  seatNumber    Int
+  createdAt     DateTime  @default(now())
+  notifiedAt    DateTime?
+
+  examSession ExamSession @relation(fields: [examSessionId], references: [examSessionId], onDelete: Cascade)
+  student     Student     @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  classroom   Classroom   @relation(fields: [classroomId], references: [classroomId], onDelete: Cascade)
+
+  @@unique([examSessionId, studentId])
+  @@unique([examSessionId, classroomId, seatNumber])
+}
+
+model ExamSlot {
+  examSlotId    Int      @id @default(autoincrement())
+  examSessionId Int
+  assignmentId  Int
+  startsAt      DateTime
+  endsAt        DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  examSession ExamSession                 @relation(fields: [examSessionId], references: [examSessionId], onDelete: Cascade)
+  assignment  Assignment                  @relation(fields: [assignmentId], references: [assignmentId], onDelete: Cascade)
+  duties      ExamInvigilatorAssignment[]
+
+  @@unique([examSessionId, assignmentId, startsAt])
+  @@index([examSessionId, startsAt])
+}
+
+model ExamInvigilatorAssignment {
+  examDutyId    Int      @id @default(autoincrement())
+  examSlotId    Int
+  classroomId   Int
+  invigilatorId Int
+  createdAt     DateTime @default(now())
+
+  examSlot    ExamSlot  @relation(fields: [examSlotId], references: [examSlotId], onDelete: Cascade)
+  classroom   Classroom @relation(fields: [classroomId], references: [classroomId], onDelete: Cascade)
+  invigilator User      @relation(fields: [invigilatorId], references: [userId], onDelete: Cascade)
+
+  @@unique([examSlotId, invigilatorId])
+  @@unique([examSlotId, classroomId, invigilatorId])
+  @@index([classroomId, examSlotId])
+}
+
 model Schedule {
-  scheduleId   Int       @id @default(autoincrement())
-  dayOfWeek    DayOfWeek
-  startTime    String
-  endTime      String
-  classroom    String?
-  assignmentId Int
+  scheduleId         Int            @id @default(autoincrement())
+  dayOfWeek          DayOfWeek
+  startTime          String
+  endTime            String
+  classroomId        Int?
+  assignmentId       Int
+  schoolYearId       Int
+  status             ScheduleStatus @default(SCHEDULED)
+  cancellationReason String?
+  cancelledAt        DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  assignment Assignment   @relation(fields: [assignmentId], references: [assignmentId], onDelete: Cascade)
+  schoolYear SchoolYear   @relation(fields: [schoolYearId], references: [schoolYearId], onDelete: Cascade)
+  classroom  Classroom?   @relation(fields: [classroomId], references: [classroomId], onDelete: SetNull)
+  attendance Attendance[]
+
+  @@index([assignmentId, schoolYearId])
+}
+
+model Classroom {
+  classroomId     Int                         @id @default(autoincrement())
+  name            String                      @unique
+  capacity        Int?
+  building        String?
+  schedules       Schedule[]
+  examAllocations ExamRoomAllocation[]
+  examDuties      ExamInvigilatorAssignment[]
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+}
+
+model Enrollment {
+  enrollmentId Int              @id @default(autoincrement())
+  studentId    Int
+  classId      Int
   schoolYearId Int
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  status       EnrollmentStatus @default(ACTIVE)
+  enrolledAt   DateTime         @default(now())
+  endedAt      DateTime?
+
+  student     Student          @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  class       Class            @relation(fields: [classId], references: [classId], onDelete: Restrict)
+  schoolYear  SchoolYear       @relation(fields: [schoolYearId], references: [schoolYearId], onDelete: Restrict)
+  invoices    StudentInvoice[]
+  reportCards ReportCard[]
+
+  @@unique([studentId, schoolYearId])
+  @@index([classId, schoolYearId, status])
+}
+
+model Guardian {
+  guardianId Int      @id @default(autoincrement())
+  userId     Int      @unique
+  occupation String?
+  address    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  students GuardianStudent[]
+}
+
+model GuardianStudent {
+  guardianId   Int
+  studentId    Int
+  relationship GuardianRelationship @default(GUARDIAN)
+  isPrimary    Boolean              @default(false)
+
+  guardian Guardian @relation(fields: [guardianId], references: [guardianId], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+
+  @@id([guardianId, studentId])
+}
+
+model Assessment {
+  assessmentId Int            @id @default(autoincrement())
+  title        String
+  type         AssessmentType @default(EXAM)
+  maxScore     Float          @default(20)
+  coefficient  Float          @default(1)
+  scheduledAt  DateTime?
+  publishedAt  DateTime?
+  assignmentId Int
+  periodId     Int
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   assignment Assignment @relation(fields: [assignmentId], references: [assignmentId], onDelete: Cascade)
-  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [schoolYearId], onDelete: Cascade)
+  period     Period     @relation(fields: [periodId], references: [periodId], onDelete: Cascade)
+  grades     Grade[]
 
-  @@unique([assignmentId, schoolYearId])
+  @@index([assignmentId, periodId])
+}
+
+model Notification {
+  notificationId Int                  @id @default(autoincrement())
+  title          String
+  message        String
+  type           NotificationType     @default(GENERAL)
+  audience       NotificationAudience @default(USER)
+  classId        Int?
+  roleTarget     Role?
+  createdById    Int?
+  publishedAt    DateTime             @default(now())
+  expiresAt      DateTime?
+
+  recipients NotificationRecipient[]
+
+  @@index([classId, publishedAt])
+}
+
+model NotificationRecipient {
+  notificationId Int
+  userId         Int
+  readAt         DateTime?
+  deliveredAt    DateTime?
+
+  notification Notification @relation(fields: [notificationId], references: [notificationId], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([notificationId, userId])
+  @@index([userId, readAt])
+}
+
+model FeeStructure {
+  feeStructureId Int          @id @default(autoincrement())
+  schoolYearId   Int
+  classId        Int?
+  label          String
+  amount         Decimal
+  frequency      FeeFrequency @default(ONCE)
+  dueDay         Int?
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [schoolYearId], onDelete: Cascade)
+  class      Class?     @relation(fields: [classId], references: [classId], onDelete: Cascade)
+
+  @@index([schoolYearId, classId, active])
+}
+
+model StudentInvoice {
+  invoiceId    Int           @id @default(autoincrement())
+  enrollmentId Int
+  reference    String        @unique
+  label        String
+  totalAmount  Decimal
+  paidAmount   Decimal       @default(0)
+  dueDate      DateTime
+  status       InvoiceStatus @default(ISSUED)
+  issuedAt     DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [enrollmentId], onDelete: Restrict)
+  payments   Payment[]
+
+  @@index([enrollmentId, status, dueDate])
+}
+
+model Payment {
+  paymentId          Int           @id @default(autoincrement())
+  invoiceId          Int
+  amount             Decimal
+  method             PaymentMethod
+  reference          String?
+  receivedById       Int
+  paidAt             DateTime      @default(now())
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  invoice    StudentInvoice @relation(fields: [invoiceId], references: [invoiceId], onDelete: Restrict)
+  receivedBy User           @relation("PaymentReceiver", fields: [receivedById], references: [userId], onDelete: Restrict)
+  receipt    Receipt?
+
+  @@index([invoiceId, paidAt])
+}
+
+model Receipt {
+  receiptId Int      @id @default(autoincrement())
+  paymentId Int      @unique
+  number    String   @unique
+  issuedAt  DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [paymentId], onDelete: Restrict)
+}
+
+model SchoolEvent {
+  eventId              Int             @id @default(autoincrement())
+  title                String
+  description          String?
+  type                 SchoolEventType @default(SCHOOL_EVENT)
+  startsAt             DateTime
+  endsAt               DateTime
+  location             String?
+  schoolYearId         Int
+  classId              Int?
+  targetRole           Role?
+  requiresConfirmation Boolean         @default(false)
+  createdById          Int
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  schoolYear SchoolYear       @relation(fields: [schoolYearId], references: [schoolYearId], onDelete: Cascade)
+  class      Class?           @relation(fields: [classId], references: [classId], onDelete: Cascade)
+  createdBy  User             @relation("EventOrganizer", fields: [createdById], references: [userId], onDelete: Restrict)
+  recipients EventRecipient[]
+
+  @@index([schoolYearId, startsAt])
+  @@index([classId, startsAt])
+}
+
+model EventRecipient {
+  eventId     Int
+  userId      Int
+  response    RsvpStatus @default(PENDING)
+  respondedAt DateTime?
+
+  event SchoolEvent @relation(fields: [eventId], references: [eventId], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([userId, response])
+}
+
+model Attendance {
+  attendanceId Int              @id @default(autoincrement())
+  studentId    Int
+  scheduleId   Int
+  date         DateTime
+  status       AttendanceStatus
+  reason       String?
+  recordedById Int
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  student    Student  @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  schedule   Schedule @relation(fields: [scheduleId], references: [scheduleId], onDelete: Cascade)
+  recordedBy User     @relation("AttendanceRecorder", fields: [recordedById], references: [userId], onDelete: Restrict)
+
+  @@unique([studentId, scheduleId, date])
+  @@index([studentId, date])
+}
+
+model ReportCard {
+  reportCardId   Int              @id @default(autoincrement())
+  enrollmentId   Int
+  periodId       Int
+  generalAverage Float
+  rank           Int
+  classSize      Int
+  appreciation   String?
+  status         ReportCardStatus @default(DRAFT)
+  generatedAt    DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  validatedById  Int?
+  validatedAt    DateTime?
+
+  enrollment  Enrollment @relation(fields: [enrollmentId], references: [enrollmentId], onDelete: Cascade)
+  period      Period     @relation(fields: [periodId], references: [periodId], onDelete: Cascade)
+  validatedBy User?      @relation("ValidatedReportCards", fields: [validatedById], references: [userId], onDelete: SetNull)
+
+  @@unique([enrollmentId, periodId])
+  @@index([periodId, status])
 }

@@ -1,17 +1,38 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { verifyUserAccess } from "@/lib/guards";
 import { getUserFromRequest } from "@/lib/auth";
+import { verifyUserAccess } from "@/lib/guards";
 import { prisma } from "@/lib/prisma";
 
-const gradeSchema = z.object({
-  value: z.number().min(0, "Value must be positive"),
-  maxScore: z.number().min(1, "Max score must be at least 1").default(20),
-  comment: z.string().optional(),
-  studentId: z.number().int().positive("Student is required"),
-  periodId: z.number().int().positive("Period is required"),
-  assignmentId: z.number().int().positive("Assignment is required"),
-});
+const gradeSchema = z
+  .object({
+    value: z.number().min(0, "Value must be positive"),
+    maxScore: z.number().min(1, "Max score must be at least 1").default(20),
+    comment: z.string().optional(),
+    studentId: z.number().int().positive("Student is required"),
+    periodId: z.number().int().positive("Period is required"),
+    assignmentId: z.number().int().positive("Assignment is required"),
+    assessmentId: z.number().int().positive().optional(),
+  })
+  .refine((data) => data.value <= data.maxScore, {
+    message: "Value cannot exceed max score",
+    path: ["value"],
+  });
+
+const gradeUpdateSchema = z
+  .object({
+    id: z.number().int().positive(),
+    value: z.number().min(0),
+    maxScore: z.number().min(1).optional(),
+    comment: z.string().optional(),
+  })
+  .refine(
+    (data) => data.maxScore === undefined || data.value <= data.maxScore,
+    {
+      message: "Value cannot exceed max score",
+      path: ["value"],
+    },
+  );
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,6 +46,10 @@ export async function GET(req: NextRequest) {
     const where: Record<string, unknown> = {};
     if (assignmentId) where.assignmentId = Number(assignmentId);
     if (studentId) where.studentId = Number(studentId);
+    const user = await getUserFromRequest(req);
+    if (user?.role === "INSTRUCTOR") {
+      where.assignment = { teacherId: user.userId };
+    }
 
     const grades = await prisma.grade.findMany({
       where,
@@ -49,10 +74,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const accessError = await verifyUserAccess(req);
+    if (accessError) return accessError;
     const user = await getUserFromRequest(req);
-    if (!user) {
+    if (!user)
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
 
     let body: unknown;
     try {
@@ -72,13 +98,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { value, maxScore, comment, studentId, periodId, assignmentId } =
-      parsed.data;
+    const {
+      value,
+      maxScore,
+      comment,
+      studentId,
+      periodId,
+      assignmentId,
+      assessmentId,
+    } = parsed.data;
 
-    const [student, period, assignment] = await Promise.all([
-      prisma.student.findUnique({ where: { studentId } }),
+    const [student, period, assignment, assessment] = await Promise.all([
+      prisma.student.findUnique({
+        where: { studentId },
+        include: { guardians: { include: { guardian: true } } },
+      }),
       prisma.period.findUnique({ where: { periodId } }),
-      prisma.assignment.findUnique({ where: { assignmentId } }),
+      prisma.assignment.findUnique({
+        where: { assignmentId },
+        include: { class: true, course: true },
+      }),
+      assessmentId
+        ? prisma.assessment.findUnique({ where: { assessmentId } })
+        : null,
     ]);
 
     if (!student) {
@@ -93,6 +135,44 @@ export async function POST(req: NextRequest) {
         { status: 404 },
       );
     }
+    if (student.classId !== assignment.classId) {
+      return NextResponse.json(
+        { error: "Student does not belong to the assignment class" },
+        { status: 400 },
+      );
+    }
+    if (
+      period.schoolYearId !== assignment.schoolYearId ||
+      assignment.class.schoolYearId !== assignment.schoolYearId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Student, assignment and period must belong to the same school year",
+        },
+        { status: 400 },
+      );
+    }
+    if (user.role === "INSTRUCTOR" && assignment.teacherId !== user.userId) {
+      return NextResponse.json(
+        { error: "You can only grade your own assigned classes" },
+        { status: 403 },
+      );
+    }
+    if (
+      assessment &&
+      (assessment.assignmentId !== assignmentId ||
+        assessment.periodId !== periodId ||
+        assessment.maxScore !== maxScore)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Assessment, assignment, period and maximum score do not match",
+        },
+        { status: 400 },
+      );
+    }
 
     const grade = await prisma.grade.create({
       data: {
@@ -103,6 +183,7 @@ export async function POST(req: NextRequest) {
         periodId,
         assignmentId,
         createdById: user.userId,
+        assessmentId: assessmentId || null,
       },
       include: {
         student: true,
@@ -111,6 +192,27 @@ export async function POST(req: NextRequest) {
         createdBy: { select: { userId: true, name: true, lastname: true } },
       },
     });
+
+    if (assessment?.publishedAt) {
+      const recipientIds = new Set<number>();
+      if (student.userId) recipientIds.add(student.userId);
+      for (const link of student.guardians)
+        recipientIds.add(link.guardian.userId);
+      if (recipientIds.size) {
+        await prisma.notification.create({
+          data: {
+            title: `Nouvelle note — ${assignment.course.name}`,
+            message: `${student.firstname} ${student.lastname} a obtenu ${value}/${maxScore}${comment ? ` — ${comment}` : ""}.`,
+            type: "GRADE_PUBLISHED",
+            audience: "USER",
+            createdById: user.userId,
+            recipients: {
+              create: [...recipientIds].map((userId) => ({ userId })),
+            },
+          },
+        });
+      }
+    }
 
     return NextResponse.json(
       { message: "Grade created successfully", grade },
@@ -127,10 +229,11 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const accessError = await verifyUserAccess(req);
+    if (accessError) return accessError;
     const user = await getUserFromRequest(req);
-    if (!user) {
+    if (!user)
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
 
     let body: unknown;
     try {
@@ -139,16 +242,40 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { id, value, maxScore, comment } = body as {
-      id: number;
-      value?: number;
-      maxScore?: number;
-      comment?: string;
-    };
-
-    if (!id || value === undefined) {
+    const parsed = gradeUpdateSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid request. 'id' and 'value' are required." },
+        {
+          error: "Validation failed",
+          details: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { id, value, maxScore, comment } = parsed.data;
+
+    const existingGrade = await prisma.grade.findUnique({
+      where: { gradeId: id },
+      include: { assignment: true },
+    });
+    if (!existingGrade) {
+      return NextResponse.json({ error: "Grade not found" }, { status: 404 });
+    }
+    if (
+      user.role === "INSTRUCTOR" &&
+      existingGrade.assignment.teacherId !== user.userId
+    ) {
+      return NextResponse.json(
+        { error: "You can only update grades from your own assignments" },
+        { status: 403 },
+      );
+    }
+
+    const effectiveMaxScore = maxScore ?? existingGrade.maxScore;
+    if (value > effectiveMaxScore) {
+      return NextResponse.json(
+        { error: "Value cannot exceed max score" },
         { status: 400 },
       );
     }

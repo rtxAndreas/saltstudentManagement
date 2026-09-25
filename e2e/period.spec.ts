@@ -14,6 +14,9 @@ test.describe("Period module", () => {
 
     const label = `E2E Period ${Date.now()}`;
     await page.getByLabel(/Label/i).fill(label);
+    await page
+      .getByLabel(/School Year/i)
+      .selectOption({ label: "E2E Year (ACTIVE)" });
     await page.getByLabel(/Start date/i).fill("2026-09-01");
     await page.getByLabel(/End date/i).fill("2026-12-20");
     await page.getByRole("button", { name: /Create period/i }).click();
@@ -29,6 +32,8 @@ test.describe("Period module", () => {
     await page.getByLabel(/Start date/i).fill("2026-12-20");
     await page.getByLabel(/End date/i).fill("2026-09-01");
     await page.getByRole("button", { name: /Create period/i }).click();
-    await expect(page.getByText(/End date must be after start date/i)).toBeVisible();
+    await expect(
+      page.getByText(/End date must be after start date/i),
+    ).toBeVisible();
   });
 });

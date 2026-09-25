@@ -24,12 +24,18 @@ export default defineConfig({
     },
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: {
+          executablePath: "/usr/bin/google-chrome",
+          args: ["--no-sandbox"],
+        },
+      },
       dependencies: ["setup"],
     },
   ],
   webServer: {
-    command: "npm run dev",
+    command: "./node_modules/.bin/next dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

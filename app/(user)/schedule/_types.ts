@@ -11,9 +11,17 @@ export interface Schedule {
   dayOfWeek: DayOfWeek;
   startTime: string;
   endTime: string;
-  classroom?: string | null;
+  classroomId?: number | null;
   assignmentId: number;
   schoolYearId: number;
+  status: "SCHEDULED" | "CANCELLED" | "RESCHEDULED" | "COMPLETED";
+  cancellationReason?: string | null;
+  classroom?: {
+    classroomId: number;
+    name: string;
+    capacity?: number | null;
+    building?: string | null;
+  };
   assignment?: {
     assignmentId: number;
     teacher?: { userId: number; name: string; lastname: string };

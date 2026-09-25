@@ -1,7 +1,7 @@
-import type { User } from "../users/_types";
-import type { Student } from "../student/_types";
-import type { Period } from "../period/_types";
 import type { Assignment } from "../assignment/_types";
+import type { Period } from "../period/_types";
+import type { Student } from "../student/_types";
+import type { User } from "../users/_types";
 
 export interface Grade {
   gradeId: number;

@@ -7,7 +7,12 @@ import { prisma } from "@/lib/prisma";
 const classSchema = z.object({
   name: z.string().min(1, "Name is required"),
   level: z.string().min(1, "Level is required"),
-  status: z.nativeEnum(ClassStatus).optional(),
+  status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+});
+
+const classStatusSchema = z.object({
+  id: z.number().int().positive(),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
 });
 
 export async function GET(req: NextRequest) {
@@ -137,14 +142,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { id, status } = body as { id: number; status: string };
-
-    if (!id || !Object.values(ClassStatus).includes(status as ClassStatus)) {
+    const parsed = classStatusSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid request. 'id' and valid 'status' are required." },
+        {
+          error: "Validation failed",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 },
       );
     }
+
+    const { id, status } = parsed.data;
 
     const updatedClass = await prisma.class.update({
       where: { classId: id },

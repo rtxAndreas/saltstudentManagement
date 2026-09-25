@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
-import { FiAlertCircle, FiCheckCircle, FiRefreshCw } from "react-icons/fi";
-import Loading from "../../components/ui/Loading";
+import { useEffect, useMemo, useState } from "react";
+import { FiAlertCircle, FiCheckCircle, FiPlus, FiX } from "react-icons/fi";
 import { useSchoolYear } from "@/app/context/SchoolYearContext";
-import { ScheduleForm } from "./_components/ScheduleForm";
-import { ScheduleList } from "./_components/ScheduleList";
-import { useSchedules } from "./_hooks/useSchedule";
+import { useUser } from "@/app/context/userContext";
+import { ScheduleFilters } from "./_components/ScheduleFilters";
+import { ScheduleSlotModal } from "./_components/ScheduleSlotModal";
+import { ScheduleWeek } from "./_components/ScheduleWeek";
+import { useScheduleWeek } from "./_hooks/useScheduleWeek";
+import type { Schedule } from "./_types";
 
 export default function SchedulePage() {
   const {
@@ -14,86 +16,162 @@ export default function SchedulePage() {
     loading,
     error,
     success,
-    setError,
-    setSuccess,
-    fetchSchedules,
-    handleRefresh,
-    handleCreate,
-    handleDelete,
-  } = useSchedules();
+    clearToast,
+    filters,
+    updateFilter,
+    resetFilters,
+    saveSlot,
+    cancelSlot,
+    restoreSlot,
+    deleteSlot,
+  } = useScheduleWeek();
   const { selectedSchoolYearId } = useSchoolYear();
+  const { userFormat, isAdmin } = useUser();
+  const isInstructor = userFormat?.role === "INSTRUCTOR";
+  const [modal, setModal] = useState<{ open: boolean; slot: Schedule | null }>({
+    open: false,
+    slot: null,
+  });
+
+  const [classes, setClasses] = useState<
+    Array<{ classId: number; name: string; level: string }>
+  >([]);
+  const [teachers, setTeachers] = useState<
+    Array<{ userId: number; name: string; lastname: string }>
+  >([]);
+  const [classrooms, setClassrooms] = useState<
+    Array<{ classroomId: number; name: string }>
+  >([]);
 
   useEffect(() => {
-    fetchSchedules(selectedSchoolYearId ?? undefined);
-  }, [fetchSchedules, selectedSchoolYearId]);
+    Promise.all([
+      fetch("/api/class").then((r) => r.json()),
+      fetch("/api/user").then((r) => r.json()),
+      fetch("/api/classroom").then((r) => r.json()),
+    ])
+      .then(([c, u, cr]) => {
+        setClasses(Array.isArray(c) ? c : []);
+        setTeachers(
+          Array.isArray(u)
+            ? u.filter((item: { role: string }) => item.role === "INSTRUCTOR")
+            : [],
+        );
+        setClassrooms(Array.isArray(cr) ? cr : []);
+      })
+      .catch(() => undefined);
+  }, []);
 
-  if (loading && schedules.length === 0) {
-    return <Loading skeleton />;
-  }
+  const levels = useMemo(
+    () => [...new Set(classes.map((item) => item.level))].sort(),
+    [classes],
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-12 text-gray-900">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Schedule management
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Build the weekly timetable and manage class slots.
-            </p>
-          </div>
+    <div className="space-y-5">
+      <div className="fixed top-6 right-6 z-[60] flex flex-col gap-2">
+        {error && (
+          <Toast
+            tone="error"
+            message={error}
+            onClose={() => clearToast("error")}
+          />
+        )}
+        {success && (
+          <Toast
+            tone="success"
+            message={success}
+            onClose={() => clearToast("success")}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Emploi du temps
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {isInstructor
+              ? "Vos cours de la semaine."
+              : "Vue hebdomadaire de l'établissement. Cliquez sur un cours pour le modifier."}
+          </p>
+        </div>
+        {isAdmin && (
           <button
             type="button"
-            onClick={() => handleRefresh(selectedSchoolYearId ?? undefined)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-all shadow-sm"
+            onClick={() => setModal({ open: true, slot: null })}
+            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
           >
-            <FiRefreshCw className={loading ? "animate-spin" : ""} />
-            Refresh
+            <FiPlus size={16} />
+            Nouveau créneau
           </button>
-        </div>
-
-        <div className="fixed top-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
-          {error && (
-            <div className="pointer-events-auto flex items-center gap-3 bg-white border border-red-100 text-red-600 px-4 py-3 rounded-2xl shadow-sm text-sm">
-              <FiAlertCircle className="shrink-0" />
-              <span>{error}</span>
-              <button
-                type="button"
-                onClick={() => setError(null)}
-                className="ml-3 text-gray-400 hover:text-gray-700 font-bold"
-              >
-                x
-              </button>
-            </div>
-          )}
-          {success && (
-            <div className="pointer-events-auto flex items-center gap-3 bg-white border border-green-100 text-green-700 px-4 py-3 rounded-2xl shadow-sm text-sm">
-              <FiCheckCircle className="shrink-0" />
-              <span>{success}</span>
-              <button
-                type="button"
-                onClick={() => setSuccess(null)}
-                className="ml-3 text-gray-400 hover:text-gray-700 font-bold"
-              >
-                x
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
-          <ScheduleForm
-            onSubmit={handleCreate}
-            onError={(msg) => setError(msg)}
-          />
-          <ScheduleList
-            schedules={schedules}
-            loading={loading}
-            onDelete={(id) => handleDelete(id, selectedSchoolYearId ?? undefined)}
-          />
-        </div>
+        )}
       </div>
+
+      <ScheduleFilters
+        filters={filters}
+        updateFilter={updateFilter}
+        resetFilters={resetFilters}
+        classes={classes}
+        levels={levels}
+        teachers={teachers}
+        classrooms={classrooms}
+      />
+
+      <ScheduleWeek
+        schedules={schedules}
+        loading={loading}
+        onSlotClick={(slot) => {
+          if (isAdmin) setModal({ open: true, slot });
+        }}
+      />
+
+      <ScheduleSlotModal
+        open={modal.open}
+        editing={modal.slot}
+        schoolYearId={selectedSchoolYearId ?? undefined}
+        onClose={() => setModal({ open: false, slot: null })}
+        onSave={saveSlot}
+        onCancelCourse={(slot, reason) => cancelSlot(slot.scheduleId, reason)}
+        onRestoreCourse={(slot) => restoreSlot(slot.scheduleId)}
+        onDelete={(slot) => deleteSlot(slot.scheduleId)}
+      />
+    </div>
+  );
+}
+
+function Toast({
+  tone,
+  message,
+  onClose,
+}: {
+  tone: "error" | "success";
+  message: string;
+  onClose: () => void;
+}) {
+  const isError = tone === "error";
+  return (
+    <div
+      className={`pointer-events-auto flex items-center gap-3 rounded-2xl border bg-white px-4 py-3 text-sm shadow-sm ${
+        isError
+          ? "border-red-100 text-red-600"
+          : "border-green-100 text-green-700"
+      }`}
+    >
+      {isError ? (
+        <FiAlertCircle className="shrink-0" />
+      ) : (
+        <FiCheckCircle className="shrink-0" />
+      )}
+      <span className="max-w-md whitespace-pre-line">{message}</span>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Fermer"
+        className="ml-3 font-bold text-gray-400 hover:text-gray-700"
+      >
+        <FiX size={14} />
+      </button>
     </div>
   );
 }

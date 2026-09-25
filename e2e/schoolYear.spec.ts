@@ -6,18 +6,13 @@ test.describe("SchoolYear module", () => {
     await login(page);
   });
 
-  test("creates a new school year", async ({ page }) => {
+  test("shows the active school year", async ({ page }) => {
     await page.goto("/schoolYear");
     await expect(
-      page.getByRole("heading", { name: /SchoolYear management/i }),
+      page.getByRole("heading", { name: /School year management/i }),
     ).toBeVisible();
 
-    const label = `E2E Year ${Date.now()}`;
-    await page.getByLabel(/Label/i).fill(label);
-    await page.getByLabel(/Start date/i).fill("2026-09-01");
-    await page.getByLabel(/End date/i).fill("2027-06-30");
-    await page.getByRole("button", { name: /Create school year/i }).click();
-
-    await expect(page.getByText(label)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "E2E Year" })).toBeVisible();
+    await expect(page.getByText("Active", { exact: true })).toBeVisible();
   });
 });

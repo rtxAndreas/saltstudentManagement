@@ -8,7 +8,9 @@ test.describe("Course module", () => {
 
   test("creates a new course", async ({ page }) => {
     await page.goto("/course");
-    await expect(page.getByRole("heading", { name: /Course management/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Course management/i }),
+    ).toBeVisible();
 
     const code = `E2E${Date.now()}`;
     await page.getByLabel(/Name \(Course Name\)/i).fill(`E2E Course ${code}`);
@@ -16,7 +18,7 @@ test.describe("Course module", () => {
     await page.getByLabel(/Coefficient/i).fill("4");
     await page.getByRole("button", { name: /Create course/i }).click();
 
-    await expect(page.getByText(new RegExp(code))).toBeVisible();
+    await expect(page.getByText(code, { exact: true })).toBeVisible();
     await expect(page.getByText(/Course created successfully/i)).toBeVisible();
   });
 

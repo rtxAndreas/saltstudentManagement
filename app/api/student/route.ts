@@ -17,6 +17,11 @@ const studentSchema = z.object({
   classId: z.number().int().positive("Class is required"),
 });
 
+const studentStatusSchema = z.object({
+  id: z.number().int().positive(),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
+});
+
 export async function GET(req: NextRequest) {
   try {
     const accessError = await verifyUserAccess(req);
@@ -30,13 +35,74 @@ export async function GET(req: NextRequest) {
       where.classId = Number(classId);
     }
 
-    const students = await prisma.student.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: { class: true },
-    });
+    // Legacy mode: consumers (grade form, user form, attendance) expect a
+    // plain array. Paginated mode is used by the students directory page.
+    const pageParam = searchParams.get("page");
+    if (!pageParam) {
+      const students = await prisma.student.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        include: { class: true },
+      });
 
-    return NextResponse.json(students);
+      return NextResponse.json(students);
+    }
+
+    const page = Math.max(1, Number(pageParam) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, Number(searchParams.get("limit")) || 10),
+    );
+    const search = (searchParams.get("search") ?? "").trim();
+    const status = searchParams.get("status");
+    const gender = searchParams.get("gender");
+
+    if (status === "ACTIVE" || status === "INACTIVE") where.status = status;
+    if (gender === "MALE" || gender === "FEMALE") where.gender = gender;
+    if (search) {
+      where.OR = [
+        { lastname: { contains: search } },
+        { firstname: { contains: search } },
+        { registrationNumber: { contains: search } },
+      ];
+    }
+
+    const [students, total, activeCount, inactiveCount, activeYear] =
+      await Promise.all([
+        prisma.student.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          include: { class: true },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.student.count({ where }),
+        prisma.student.count({ where: { status: "ACTIVE" } }),
+        prisma.student.count({ where: { status: "INACTIVE" } }),
+        prisma.schoolYear.findFirst({ where: { status: "ACTIVE" } }),
+      ]);
+
+    const newEnrollments = activeYear
+      ? await prisma.enrollment.count({
+          where: { schoolYearId: activeYear.schoolYearId },
+        })
+      : 0;
+
+    return NextResponse.json({
+      data: students,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+      stats: {
+        total: activeCount + inactiveCount,
+        active: activeCount,
+        inactive: inactiveCount,
+        newEnrollments,
+      },
+    });
   } catch (error) {
     console.error("GET /api/student error:", error);
     return NextResponse.json(
@@ -87,21 +153,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Class not found" }, { status: 404 });
     }
 
-    const student = await prisma.student.create({
-      data: {
-        registrationNumber: registrationNumber || null,
-        lastname,
-        firstname,
-        gender,
-        birthDate: new Date(birthDate),
-        birthPlace: birthPlace || null,
-        address: address || null,
-        parentPhone: parentPhone || null,
-        parentEmail: parentEmail || null,
-        status: Status.ACTIVE,
-        classId,
-      },
-      include: { class: true },
+    const student = await prisma.$transaction(async (tx) => {
+      const created = await tx.student.create({
+        data: {
+          registrationNumber: registrationNumber || null,
+          lastname,
+          firstname,
+          gender,
+          birthDate: new Date(birthDate),
+          birthPlace: birthPlace || null,
+          address: address || null,
+          parentPhone: parentPhone || null,
+          parentEmail: parentEmail || null,
+          status: Status.ACTIVE,
+          classId,
+        },
+      });
+      await tx.enrollment.create({
+        data: {
+          studentId: created.studentId,
+          classId,
+          schoolYearId: classItem.schoolYearId,
+        },
+      });
+      return tx.student.findUniqueOrThrow({
+        where: { studentId: created.studentId },
+        include: { class: true },
+      });
     });
 
     return NextResponse.json(
@@ -129,14 +207,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { id, status } = body as { id: number; status: string };
-
-    if (!id || !Object.values(Status).includes(status as Status)) {
+    const parsed = studentStatusSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid request. 'id' and valid 'status' are required." },
+        {
+          error: "Validation failed",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 },
       );
     }
+
+    const { id, status } = parsed.data;
 
     const updatedStudent = await prisma.student.update({
       where: { studentId: id },

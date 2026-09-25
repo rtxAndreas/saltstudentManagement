@@ -8,7 +8,9 @@ test.describe("Class module", () => {
 
   test("creates a new class", async ({ page }) => {
     await page.goto("/class");
-    await expect(page.getByRole("heading", { name: /Class management/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Class management/i }),
+    ).toBeVisible();
 
     const name = `E2E Class ${Date.now()}`;
     await page.getByLabel(/Name \(Class Name\)/i).fill(name);

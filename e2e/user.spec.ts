@@ -18,14 +18,19 @@ test.describe("User module", () => {
     await page.getByLabel(/Contact/i).fill("+237600000000");
     await page.getByLabel(/Email/i).fill(`instructor${ts}@test.com`);
     await page.getByLabel(/Role/i).selectOption("INSTRUCTOR");
-    await page.getByLabel(/Registration Number \(Teacher ID\)/i).fill(`TCH-${ts}`);
+    await page
+      .getByLabel(/Registration Number \(Teacher ID\)/i)
+      .fill(`TCH-${ts}`);
     await page.getByLabel(/Password/i).fill("1234");
 
     await page.getByRole("button", { name: /Create User/i }).click();
 
     await page.waitForURL(/\/users/);
     await expect(page).toHaveURL(/\/users/);
-    await expect(page.getByText(`Instructor${ts}`)).toBeVisible();
+    await page.getByLabel(/Search users/i).fill(`Instructor${ts}`);
+    await expect(
+      page.getByText(`Instructor${ts}`, { exact: true }),
+    ).toBeVisible();
   });
 
   test("rejects duplicate email", async ({ page }) => {

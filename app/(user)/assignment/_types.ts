@@ -1,8 +1,8 @@
 import type { Class } from "../class/_types";
 import type { Course } from "../course/_types";
+import type { Grade } from "../grade/_types";
 import type { SchoolYear } from "../schoolYear/_types";
 import type { User } from "../users/_types";
-import type { Grade } from "../grade/_types";
 
 export interface Assignment {
   assignmentId: number;

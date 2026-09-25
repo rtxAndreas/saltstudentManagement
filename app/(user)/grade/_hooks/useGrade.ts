@@ -34,6 +34,7 @@ export function useGrades(assignmentId?: number) {
     studentId: number;
     periodId: number;
     assignmentId: number;
+    assessmentId?: number;
   }) => {
     const res = await fetch("/api/grade", {
       method: "POST",

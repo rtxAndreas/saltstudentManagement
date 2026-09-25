@@ -12,8 +12,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "e2e": "playwright test",
     "lint": "eslint",
     "tsc": "tsc",
+    "postinstall": "prisma generate",
     "prepare": "husky"
   },
   "dependencies": {
@@ -59,5 +61,15 @@
     "prisma": "^7.3.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "bcrypt",
+      "better-sqlite3",
+      "prisma",
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }

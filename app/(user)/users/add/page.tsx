@@ -2,17 +2,17 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiAlertCircle,
   FiCheckCircle,
-  FiLoader,
-  FiMail,
   FiHash,
+  FiLoader,
   FiLock,
-  FiUser,
+  FiMail,
   FiPhone,
   FiShield,
+  FiUser,
   FiUserPlus,
 } from "react-icons/fi";
 import * as z from "zod";
@@ -25,6 +25,8 @@ const schema = z.object({
   password: z.string().min(4, "Password must be at least 4 characters"),
   role: z.string().min(1, "Role is required"),
   registrationNumber: z.string().optional(),
+  studentId: z.string().optional(),
+  childStudentIds: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -45,7 +47,11 @@ const createUserRequest = async (data: FormValues) => {
   const response = await fetch("/api/user", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      ...data,
+      studentId: data.studentId ? Number(data.studentId) : undefined,
+      childStudentIds: data.childStudentIds?.map(Number),
+    }),
   });
   if (!response.ok) {
     const errorData = await response.json();
@@ -64,6 +70,15 @@ export default function CreateUserPage() {
     {},
   );
   const [submitting, setSubmitting] = useState(false);
+  const [students, setStudents] = useState<
+    Array<{
+      studentId: number;
+      firstname: string;
+      lastname: string;
+      registrationNumber: string | null;
+      userId?: number | null;
+    }>
+  >([]);
 
   const [formData, setFormData] = useState<FormValues>({
     name: "",
@@ -73,7 +88,16 @@ export default function CreateUserPage() {
     password: "",
     role: "INSTRUCTOR",
     registrationNumber: "",
+    studentId: "",
+    childStudentIds: [],
   });
+
+  useEffect(() => {
+    fetch("/api/student")
+      .then((response) => (response.ok ? response.json() : []))
+      .then(setStudents)
+      .catch(() => setStudents([]));
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -121,7 +145,7 @@ export default function CreateUserPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-12 text-gray-900">
+    <div className="min-h-screen p-6 md:p-12 text-gray-900">
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="flex items-start justify-between gap-6">
           <div>
@@ -177,9 +201,7 @@ export default function CreateUserPage() {
               <div className="p-2.5 bg-gray-900 rounded-xl">
                 <FiUserPlus className="text-white text-lg" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                New user
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-900">New user</h2>
             </div>
 
             <form
@@ -282,6 +304,9 @@ export default function CreateUserPage() {
                 >
                   <option value="INSTRUCTOR">Instructor</option>
                   <option value="ADMIN">Admin</option>
+                  <option value="ACCOUNTANT">Comptable</option>
+                  <option value="STUDENT">Élève</option>
+                  <option value="PARENT">Parent</option>
                 </select>
                 {validationErrors.role && (
                   <p className="text-red-500 text-xs">
@@ -289,6 +314,76 @@ export default function CreateUserPage() {
                   </p>
                 )}
               </div>
+
+              {formData.role === "STUDENT" && (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="studentId"
+                    className="text-sm font-medium text-gray-600"
+                  >
+                    Dossier élève associé
+                  </label>
+                  <select
+                    id="studentId"
+                    name="studentId"
+                    required
+                    value={formData.studentId}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
+                  >
+                    <option value="">Sélectionner l’élève</option>
+                    {students
+                      .filter((student) => !student.userId)
+                      .map((student) => (
+                        <option
+                          key={student.studentId}
+                          value={student.studentId}
+                        >
+                          {student.firstname} {student.lastname} ·{" "}
+                          {student.registrationNumber ?? "sans matricule"}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              {formData.role === "PARENT" && (
+                <fieldset className="space-y-2 rounded-xl border border-gray-200 p-3">
+                  <legend className="px-1 text-sm font-medium text-gray-600">
+                    Enfant(s) associé(s)
+                  </legend>
+                  {students.map((student) => (
+                    <label
+                      key={student.studentId}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          formData.childStudentIds?.includes(
+                            String(student.studentId),
+                          ) ?? false
+                        }
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            childStudentIds: event.target.checked
+                              ? [
+                                  ...(current.childStudentIds ?? []),
+                                  String(student.studentId),
+                                ]
+                              : (current.childStudentIds ?? []).filter(
+                                  (id) => id !== String(student.studentId),
+                                ),
+                          }))
+                        }
+                      />
+                      {student.firstname} {student.lastname} ·{" "}
+                      {student.registrationNumber ?? "sans matricule"}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
 
               <div className="space-y-1.5">
                 <label

@@ -3,17 +3,7 @@
 import { useEffect, useState } from "react";
 import { FiSave } from "react-icons/fi";
 
-interface Settings {
-  id: number;
-  schoolName: string;
-  address?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  logoUrl?: string | null;
-}
-
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +22,6 @@ export default function SettingsPage() {
         const res = await fetch("/api/schoolSettings");
         if (res.ok) {
           const data = await res.json();
-          setSettings(data);
           setForm({
             schoolName: data.schoolName || "",
             address: data.address || "",
@@ -84,7 +73,7 @@ export default function SettingsPage() {
     "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none transition-all";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-12 text-gray-900">
+    <div className="min-h-screen p-6 md:p-12 text-gray-900">
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
@@ -128,7 +117,10 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="address" className="text-sm font-medium text-gray-600">
+            <label
+              htmlFor="address"
+              className="text-sm font-medium text-gray-600"
+            >
               Address
             </label>
             <input
@@ -141,7 +133,10 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="phone" className="text-sm font-medium text-gray-600">
+            <label
+              htmlFor="phone"
+              className="text-sm font-medium text-gray-600"
+            >
               Phone
             </label>
             <input
@@ -154,7 +149,10 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium text-gray-600">
+            <label
+              htmlFor="email"
+              className="text-sm font-medium text-gray-600"
+            >
               Email
             </label>
             <input
@@ -168,7 +166,10 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="logoUrl" className="text-sm font-medium text-gray-600">
+            <label
+              htmlFor="logoUrl"
+              className="text-sm font-medium text-gray-600"
+            >
               Logo URL
             </label>
             <input

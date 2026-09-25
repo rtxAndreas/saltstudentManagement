@@ -11,6 +11,13 @@ const assignmentSchema = z.object({
   schoolYearId: z.number().int().positive("School year is required"),
 });
 
+const assignmentUpdateSchema = z.object({
+  id: z.number().int().positive(),
+  classId: z.number().int().positive().optional(),
+  courseId: z.number().int().positive().optional(),
+  schoolYearId: z.number().int().positive().optional(),
+});
+
 export async function GET(req: NextRequest) {
   try {
     const accessError = await verifyUserAccess(req);
@@ -63,15 +70,18 @@ export async function POST(req: NextRequest) {
     const { teacherId, classId, courseId, schoolYearId } = parsed.data;
 
     // 2. Validate the referenced entities exist
-    const [teacher, classItem, courseItem, schoolYearItem] =
-      await Promise.all([
-        prisma.user.findUnique({ where: { userId: teacherId } }),
-        prisma.class.findUnique({ where: { classId } }),
-        prisma.course.findUnique({ where: { courseId } }),
-        prisma.schoolYear.findUnique({ where: { schoolYearId } }),
-      ]);
+    const [teacher, classItem, courseItem, schoolYearItem] = await Promise.all([
+      prisma.user.findUnique({ where: { userId: teacherId } }),
+      prisma.class.findUnique({ where: { classId } }),
+      prisma.course.findUnique({ where: { courseId } }),
+      prisma.schoolYear.findUnique({ where: { schoolYearId } }),
+    ]);
 
-    if (!teacher || teacher.role !== "INSTRUCTOR" || teacher.status !== "ACTIVE") {
+    if (
+      !teacher ||
+      teacher.role !== "INSTRUCTOR" ||
+      teacher.status !== "ACTIVE"
+    ) {
       return NextResponse.json(
         { error: "Teacher not found, must be an active INSTRUCTOR" },
         { status: 404 },
@@ -141,19 +151,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { id, classId, courseId, schoolYearId } = body as {
-      id: number;
-      classId?: number;
-      courseId?: number;
-      schoolYearId?: number;
-    };
-
-    if (!id) {
+    const parsed = assignmentUpdateSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid request. 'id' is required." },
+        {
+          error: "Validation failed",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 },
       );
     }
+
+    const { id, classId, courseId, schoolYearId } = parsed.data;
 
     const updatedAssignment = await prisma.assignment.update({
       where: { assignmentId: id },

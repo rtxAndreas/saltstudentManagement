@@ -4,7 +4,7 @@ import { z } from "zod";
 import { verifyAdminAccess } from "@/lib/guards";
 import { prisma } from "@/lib/prisma";
 
-export const periodSchema = z
+const periodSchema = z
   .object({
     label: z.string().min(1, "Label is required"),
     startDate: z.string().datetime("Invalid startDate format"),
@@ -15,6 +15,11 @@ export const periodSchema = z
     message: "endDate must be after startDate",
     path: ["endDate"],
   });
+
+const periodStatusSchema = z.object({
+  id: z.number().int().positive(),
+  status: z.enum(["DRAFT", "CLOSED"]),
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -108,14 +113,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { id, status } = body as { id: number; status: string };
-
-    if (!id || !Object.values(PeriodStatus).includes(status as PeriodStatus)) {
+    const parsed = periodStatusSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid request. 'id' and valid 'status' are required." },
+        {
+          error: "Validation failed",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 },
       );
     }
+
+    const { id, status } = parsed.data;
 
     const updatedPeriod = await prisma.$transaction(async (tx) => {
       const target = await tx.period.findUnique({

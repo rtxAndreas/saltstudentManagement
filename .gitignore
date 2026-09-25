@@ -44,6 +44,9 @@ agent.md
 *.tsbuildinfo
 next-env.d.ts
 
+# Ancienne copie SQLite Prisma
+/prisma/dev.db*
+
 # Playwright
 node_modules/
 /test-results/

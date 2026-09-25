@@ -15,6 +15,11 @@ const schoolYearSchema = z
     path: ["endDate"],
   });
 
+const schoolYearStatusSchema = z.object({
+  id: z.number().int().positive(),
+  status: z.literal(Status.ACTIVE),
+});
+
 export async function POST(req: NextRequest) {
   try {
     const accessError = await verifyAdminAccess(req);
@@ -110,14 +115,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { id, status } = body as { id: number; status: string };
-
-    if (!id || status !== Status.ACTIVE) {
+    const parsed = schoolYearStatusSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid request. 'id' and 'status: ACTIVE' are required." },
+        {
+          error: "Validation failed",
+          details: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 },
       );
     }
+
+    const { id } = parsed.data;
 
     const updatedSchoolYear = await prisma.$transaction(async (tx) => {
       const target = await tx.schoolYear.findUnique({

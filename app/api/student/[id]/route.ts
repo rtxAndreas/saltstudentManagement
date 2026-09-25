@@ -29,7 +29,10 @@ export async function GET(
     const studentId = Number(id);
 
     if (Number.isNaN(studentId)) {
-      return NextResponse.json({ error: "Invalid student ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid student ID" },
+        { status: 400 },
+      );
     }
 
     const student = await prisma.student.findUnique({
@@ -63,7 +66,10 @@ export async function PUT(
     const studentId = Number(id);
 
     if (Number.isNaN(studentId)) {
-      return NextResponse.json({ error: "Invalid student ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid student ID" },
+        { status: 400 },
+      );
     }
 
     const student = await prisma.student.findUnique({ where: { studentId } });
@@ -128,7 +134,10 @@ export async function DELETE(
     const studentId = Number(id);
 
     if (Number.isNaN(studentId)) {
-      return NextResponse.json({ error: "Invalid student ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid student ID" },
+        { status: 400 },
+      );
     }
 
     await prisma.student.delete({ where: { studentId } });
@@ -137,7 +146,10 @@ export async function DELETE(
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2025") {
-        return NextResponse.json({ error: "Student not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Student not found" },
+          { status: 404 },
+        );
       }
     }
     console.error("DELETE /api/student/[id] error:", error);
