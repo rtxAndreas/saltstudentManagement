@@ -133,10 +133,11 @@ export function DynamicTable<T>({
     }
     if (sort) {
       const column = columns.find((item) => item.key === sort.key);
-      if (column?.sortable && column.sortValue) {
+      const sortValue = column?.sortable ? column.sortValue : undefined;
+      if (sortValue) {
         rows = rows.slice().sort((a, b) => {
-          const left = column.sortValue!(a);
-          const right = column.sortValue!(b);
+          const left = sortValue(a);
+          const right = sortValue(b);
           if (typeof left === "number" && typeof right === "number") {
             return (left - right) * sort.dir;
           }
@@ -271,7 +272,7 @@ export function DynamicTable<T>({
                       >
                         {column.header}
                         {active &&
-                          (sort!.dir === 1 ? (
+                          (sort?.dir === 1 ? (
                             <FiChevronUp size={14} />
                           ) : (
                             <FiChevronDown size={14} />

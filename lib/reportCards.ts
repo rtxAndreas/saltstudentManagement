@@ -107,7 +107,8 @@ export async function computeClassResults(
   );
   const generalAverages = new Map<number, number>();
   for (const enrollment of gradedStudents) {
-    const courseMap = byStudent.get(enrollment.studentId)!;
+    const courseMap = byStudent.get(enrollment.studentId);
+    if (!courseMap) continue;
     const courseAverages = [...courseMap.values()].map((item) =>
       item.weight ? item.total / item.weight : 0,
     );
@@ -139,7 +140,7 @@ export async function computeClassResults(
       return {
         courseId: course.courseId,
         course: course.course,
-        average: entry && entry.weight ? round2(entry.total / entry.weight) : 0,
+        average: entry?.weight ? round2(entry.total / entry.weight) : 0,
         gradedCount: entry?.count ?? 0,
       };
     });

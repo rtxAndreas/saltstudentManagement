@@ -98,7 +98,7 @@ export default function StudentPage() {
         .join(";"),
     );
     const blob = new Blob(
-      ["\uFEFF" + [headers.join(";"), ...lines].join("\n")],
+      [`\uFEFF${[headers.join(";"), ...lines].join("\n")}`],
       {
         type: "text/csv;charset=utf-8",
       },

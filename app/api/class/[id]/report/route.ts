@@ -170,10 +170,13 @@ export async function GET(
       sorted[i].rank = currentRank;
     }
 
-    const ranked: StudentReport[] = studentsWithAverage.map((s) => {
-      const found = sorted.find((r) => r.studentId === s.studentId);
-      return { ...s, rank: found!.rank };
-    });
+    const ranks = new Map<number, number>(
+      sorted.map((r) => [r.studentId, r.rank]),
+    );
+    const ranked: StudentReport[] = studentsWithAverage.map((s) => ({
+      ...s,
+      rank: ranks.get(s.studentId) ?? 0,
+    }));
 
     const studentsWithGradesCount = studentsWithAverage.filter(
       (s) => s.grades.length > 0,

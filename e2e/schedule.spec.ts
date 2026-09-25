@@ -86,25 +86,37 @@ test.beforeAll(async ({ browser }) => {
     (item: { userId: number }) => item.userId !== seeded.teacherId,
   );
 
-  const createAssignment = async (teacherId: number, classId: number) => {
+  const createAssignment = async (
+    teacherId: number,
+    classId: number,
+  ): Promise<number> => {
     const response = await admin.post("/api/assignment", {
       data: { teacherId, classId, courseId: seeded.courseId, schoolYearId },
     });
-    if (response.status() === 201)
-      return (await response.json()).assignment?.assignmentId;
+    if (response.status() === 201) {
+      const created = (await response.json()).assignment?.assignmentId;
+      if (created != null) return created;
+    }
     // Already exists from a previous run: look it up
     const list = await (await admin.get("/api/assignment")).json();
-    return list.find(
+    const existing = list.find(
       (item: { teacherId: number; classId: number }) =>
         item.teacherId === teacherId && item.classId === classId,
-    ).assignmentId;
+    );
+    if (!existing) {
+      throw new Error(
+        `Unable to create or find the assignment for class ${classId}`,
+      );
+    }
+    return existing.assignmentId;
   };
-  assignmentB = (await createAssignment(teacherB.userId, classAId))!;
+  assignmentB = await createAssignment(teacherB.userId, classAId);
   const otherClass = (await (await admin.get("/api/class")).json()).find(
     (item: { classId: number; status: string }) =>
       item.classId !== classAId && item.status === "ACTIVE",
   );
-  assignmentC = (await createAssignment(teacherB.userId, otherClass.classId))!;
+  if (!otherClass) throw new Error("No second active class available");
+  assignmentC = await createAssignment(teacherB.userId, otherClass.classId);
 
   // Clean slate: remove leftover slots from previous runs on the fixture assignments
   for (const assignmentId of [assignmentA, assignmentB, assignmentC]) {

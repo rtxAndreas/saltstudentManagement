@@ -122,10 +122,11 @@ export async function POST(
     for (const seat of plan) {
       const student = students.find(
         (item) => item.studentId === seat.studentId,
-      )!;
+      );
       const room = classrooms.find(
         (item) => item.classroomId === seat.classroomId,
-      )!;
+      );
+      if (!student || !room) continue;
       const recipientIds = new Set<number>();
       if (student.userId) recipientIds.add(student.userId);
       for (const link of student.guardians)

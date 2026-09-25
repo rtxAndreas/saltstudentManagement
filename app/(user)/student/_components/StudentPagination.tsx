@@ -101,9 +101,7 @@ export function StudentPagination({
           aria-label="Première page"
           disabled={page === 1}
           onClick={() => onPageChange(1)}
-          className={
-            buttonBase + " border-slate-200 text-slate-600 hover:bg-slate-50"
-          }
+          className={`${buttonBase} border-slate-200 text-slate-600 hover:bg-slate-50`}
         >
           «
         </button>
@@ -112,9 +110,7 @@ export function StudentPagination({
           aria-label="Page précédente"
           disabled={page === 1}
           onClick={() => onPageChange(page - 1)}
-          className={
-            buttonBase + " border-slate-200 text-slate-600 hover:bg-slate-50"
-          }
+          className={`${buttonBase} border-slate-200 text-slate-600 hover:bg-slate-50`}
         >
           <FiChevronLeft size={15} />
         </button>
@@ -131,7 +127,7 @@ export function StudentPagination({
               aria-current={value === page ? "page" : undefined}
               className={
                 value === page
-                  ? buttonBase + " border-blue-600 bg-blue-600 text-white"
+                  ? `${buttonBase} border-blue-600 bg-blue-600 text-white`
                   : buttonBase +
                     " border-slate-200 text-slate-600 hover:bg-slate-50"
               }
@@ -145,9 +141,7 @@ export function StudentPagination({
           aria-label="Page suivante"
           disabled={page === totalPages}
           onClick={() => onPageChange(page + 1)}
-          className={
-            buttonBase + " border-slate-200 text-slate-600 hover:bg-slate-50"
-          }
+          className={`${buttonBase} border-slate-200 text-slate-600 hover:bg-slate-50`}
         >
           <FiChevronRight size={15} />
         </button>
@@ -156,9 +150,7 @@ export function StudentPagination({
           aria-label="Dernière page"
           disabled={page === totalPages}
           onClick={() => onPageChange(totalPages)}
-          className={
-            buttonBase + " border-slate-200 text-slate-600 hover:bg-slate-50"
-          }
+          className={`${buttonBase} border-slate-200 text-slate-600 hover:bg-slate-50`}
         >
           »
         </button>

@@ -33,7 +33,9 @@ function mixedOrder(students: SeatingStudent[]): SeatingStudent[] {
       candidates[0];
     if (!selected) break;
     const [classId, group] = selected;
-    result.push(group.shift()!);
+    const next = group.shift();
+    if (!next) break;
+    result.push(next);
     previousClassId = classId;
   }
   return result;

@@ -76,10 +76,12 @@ body {
   nav,
   footer,
   .no-print {
+    /* biome-ignore lint/complexity/noImportantStyles: must win over the Tailwind display utilities applied to the layout shell. */
     display: none !important;
   }
 
   main {
+    /* biome-ignore lint/complexity/noImportantStyles: must win over the Tailwind padding utilities applied to the layout shell. */
     padding: 0 !important;
   }
 }
