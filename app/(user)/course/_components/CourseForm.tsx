@@ -3,14 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import {
-  FiBookOpen,
-  FiHash,
-  FiLayers,
-  FiLoader,
-  FiPlus,
-  FiTag,
-} from "react-icons/fi";
+import { FiBookOpen, FiHash, FiLayers, FiLoader, FiTag } from "react-icons/fi";
 import * as z from "zod";
 import type { Class } from "../../class/_types";
 import type { Course } from "../_types";
@@ -118,132 +111,121 @@ export function CourseForm({
   };
 
   return (
-    <div className="sticky top-12 bg-white border border-gray-200 p-8 rounded-2xl shadow-sm text-gray-900">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-2.5 bg-gray-900 rounded-xl">
-          <FiPlus className="text-white text-lg" />
-        </div>
-        <h2 className="text-lg font-semibold text-gray-900">
-          {editingCourse ? "Edit course" : "New course"}
-        </h2>
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+      <div className="space-y-1.5">
+        <label
+          htmlFor="name"
+          className="text-sm font-medium text-gray-600 flex items-center gap-2"
+        >
+          <FiTag className="text-gray-400" /> Name (Course Name)
+        </label>
+        <input
+          id="name"
+          {...register("name")}
+          placeholder="e.g. Mathematics"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none transition-all"
+        />
+        {errors.name && (
+          <p className="text-red-500 text-xs">{errors.name.message}</p>
+        )}
       </div>
 
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
-        <div className="space-y-1.5">
-          <label
-            htmlFor="name"
-            className="text-sm font-medium text-gray-600 flex items-center gap-2"
-          >
-            <FiTag className="text-gray-400" /> Name (Course Name)
-          </label>
-          <input
-            id="name"
-            {...register("name")}
-            placeholder="e.g. Mathematics"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none transition-all"
-          />
-          {errors.name && (
-            <p className="text-red-500 text-xs">{errors.name.message}</p>
-          )}
-        </div>
+      <div className="space-y-1.5">
+        <label
+          htmlFor="code"
+          className="text-sm font-medium text-gray-600 flex items-center gap-2"
+        >
+          <FiHash className="text-gray-400" /> Code (Course Code)
+        </label>
+        <input
+          id="code"
+          {...register("code")}
+          placeholder="e.g. MATH-101"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none transition-all"
+        />
+        {errors.code && (
+          <p className="text-red-500 text-xs">{errors.code.message}</p>
+        )}
+      </div>
 
-        <div className="space-y-1.5">
-          <label
-            htmlFor="code"
-            className="text-sm font-medium text-gray-600 flex items-center gap-2"
-          >
-            <FiHash className="text-gray-400" /> Code (Course Code)
-          </label>
-          <input
-            id="code"
-            {...register("code")}
-            placeholder="e.g. MATH-101"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none transition-all"
-          />
-          {errors.code && (
-            <p className="text-red-500 text-xs">{errors.code.message}</p>
-          )}
-        </div>
+      <div className="space-y-1.5">
+        <label
+          htmlFor="coefficient"
+          className="text-sm font-medium text-gray-600 flex items-center gap-2"
+        >
+          <FiBookOpen className="text-gray-400" /> Coefficient
+        </label>
+        <input
+          id="coefficient"
+          type="number"
+          {...register("coefficient", { valueAsNumber: true })}
+          placeholder="e.g. 4"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none transition-all"
+        />
+        {errors.coefficient && (
+          <p className="text-red-500 text-xs">{errors.coefficient.message}</p>
+        )}
+      </div>
 
-        <div className="space-y-1.5">
-          <label
-            htmlFor="coefficient"
-            className="text-sm font-medium text-gray-600 flex items-center gap-2"
-          >
-            <FiBookOpen className="text-gray-400" /> Coefficient
-          </label>
-          <input
-            id="coefficient"
-            type="number"
-            {...register("coefficient", { valueAsNumber: true })}
-            placeholder="e.g. 4"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none transition-all"
-          />
-          {errors.coefficient && (
-            <p className="text-red-500 text-xs">{errors.coefficient.message}</p>
-          )}
-        </div>
+      <div className="space-y-2">
+        <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
+          <FiLayers className="text-gray-400" /> Classes
+        </span>
+        {classesLoading ? (
+          <p className="text-xs text-gray-400">Loading classes...</p>
+        ) : classes.length === 0 ? (
+          <p className="text-xs text-gray-400">
+            No classes available. Create a class first.
+          </p>
+        ) : (
+          <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50">
+            {classes.map((cls) => (
+              <label
+                key={cls.classId}
+                className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-all"
+              >
+                <input
+                  type="checkbox"
+                  value={cls.classId}
+                  {...register("classIds")}
+                  className="rounded border-gray-300 text-gray-900 focus:ring-gray-950 accent-gray-900"
+                />
+                <span>
+                  {cls.name}{" "}
+                  <span className="text-xs text-gray-400">({cls.level})</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
 
-        <div className="space-y-2">
-          <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
-            <FiLayers className="text-gray-400" /> Classes
-          </span>
-          {classesLoading ? (
-            <p className="text-xs text-gray-400">Loading classes...</p>
-          ) : classes.length === 0 ? (
-            <p className="text-xs text-gray-400">
-              No classes available. Create a class first.
-            </p>
-          ) : (
-            <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50">
-              {classes.map((cls) => (
-                <label
-                  key={cls.classId}
-                  className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-all"
-                >
-                  <input
-                    type="checkbox"
-                    value={cls.classId}
-                    {...register("classIds")}
-                    className="rounded border-gray-300 text-gray-900 focus:ring-gray-950 accent-gray-900"
-                  />
-                  <span>
-                    {cls.name}{" "}
-                    <span className="text-xs text-gray-400">({cls.level})</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          {editingCourse && (
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-xl text-sm transition-all"
-            >
-              Cancel
-            </button>
-          )}
+      <div className="flex gap-2">
+        {editingCourse && (
           <button
-            type="submit"
-            disabled={submitting}
-            className="flex-1 bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            type="button"
+            onClick={onCancelEdit}
+            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-xl text-sm transition-all"
           >
-            {submitting ? (
-              <>
-                <FiLoader className="animate-spin" /> Saving...
-              </>
-            ) : editingCourse ? (
-              "Save changes"
-            ) : (
-              "Create course"
-            )}
+            Cancel
           </button>
-        </div>
-      </form>
-    </div>
+        )}
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex-1 bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {submitting ? (
+            <>
+              <FiLoader className="animate-spin" /> Saving...
+            </>
+          ) : editingCourse ? (
+            "Save changes"
+          ) : (
+            "Create course"
+          )}
+        </button>
+      </div>
+    </form>
   );
 }

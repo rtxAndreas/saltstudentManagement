@@ -3,8 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import type React from "react";
 import { useState } from "react";
-import Button from "@/app/components/ui/Button";
-import Input from "@/app/components/ui/Input";
+import { FiLoader } from "react-icons/fi";
 
 interface ValidationErrors {
   email?: string[];
@@ -32,6 +31,9 @@ const loginUser = async (data: { email: string; password: string }) => {
   }
   return response.json();
 };
+
+const inputStyles =
+  "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-all placeholder-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10";
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -61,13 +63,18 @@ export default function Login() {
 
   const mutation = useMutation({
     mutationFn: loginUser,
-    onSuccess: (data) => {
-      console.log("Login success! Data:", data);
+    onSuccess: (data: { role?: string }) => {
       setValidationErrors({});
       setGlobalError("");
 
       const searchParams = new URLSearchParams(window.location.search);
-      const redirectPath = searchParams.get("redirect") || "/dashboard";
+      const roleHome =
+        data.role === "STUDENT" || data.role === "PARENT"
+          ? "/portal"
+          : data.role === "ACCOUNTANT"
+            ? "/finance"
+            : "/dashboard";
+      const redirectPath = searchParams.get("redirect") || roleHome;
 
       window.location.href = redirectPath;
     },
@@ -83,7 +90,7 @@ export default function Login() {
       }
     },
   });
-  console.log("user succes,", mutation);
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setValidationErrors({});
@@ -92,67 +99,98 @@ export default function Login() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 p-4">
-      <div className="w-full max-w-md bg-neutral-900 shadow-2xl rounded-3xl p-8 border border-neutral-800">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">
-            Welcome Back
-          </h1>
-          <p className="text-neutral-400 text-sm">
+    <div className="graph-paper flex h-dvh items-center justify-center overflow-hidden px-3 py-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl sm:p-7">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-semibold text-gray-900">Welcome Back</h1>
+          <p className="mt-1 text-sm text-gray-500">
             Enter your credentials to access your account.
           </p>
         </div>
 
         {globalError && (
-          <div className="mb-4 px-4 py-3 bg-red-950/30 border border-red-900 rounded-2xl">
-            <p className="text-sm text-red-400">{globalError}</p>
+          <div className="mb-4 rounded-xl border border-red-100 bg-red-50 p-3">
+            <p className="text-sm text-red-600">{globalError}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              label="Email Address"
-              placeholder="name@example.com"
-              value={formData.email}
-              onChange={handleChange}
-              error={validationErrors.email?.[0]}
-              className="bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500 focus:ring-white"
-              labelClassName="text-neutral-300"
-            />
+            <div className="space-y-1.5">
+              <label
+                htmlFor="email"
+                className="ml-1 text-sm font-medium text-gray-600"
+              >
+                Email Address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="name@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                aria-invalid={Boolean(validationErrors.email?.[0])}
+                className={
+                  validationErrors.email?.[0]
+                    ? inputStyles +
+                      " border-red-400 focus:border-red-400 focus:ring-red-100"
+                    : inputStyles
+                }
+              />
+              {validationErrors.email?.[0] && (
+                <p className="ml-1 text-xs font-medium text-red-500">
+                  {validationErrors.email[0]}
+                </p>
+              )}
+            </div>
 
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              label="Password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-              error={validationErrors.password?.[0]}
-              className="bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500 focus:ring-white"
-              labelClassName="text-neutral-300"
-            />
+            <div className="space-y-1.5">
+              <label
+                htmlFor="password"
+                className="ml-1 text-sm font-medium text-gray-600"
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                aria-invalid={Boolean(validationErrors.password?.[0])}
+                className={
+                  validationErrors.password?.[0]
+                    ? inputStyles +
+                      " border-red-400 focus:border-red-400 focus:ring-red-100"
+                    : inputStyles
+                }
+              />
+              {validationErrors.password?.[0] && (
+                <p className="ml-1 text-xs font-medium text-red-500">
+                  {validationErrors.password[0]}
+                </p>
+              )}
+            </div>
           </div>
 
-          <Button
+          <button
             type="submit"
-            isLoading={mutation.isPending}
-            className="w-full font-bold py-4 rounded-2xl active:scale-[0.98] transition-all duration-200 shadow-lg"
+            disabled={mutation.isPending}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-3 text-sm font-medium text-white transition-all hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
+            {mutation.isPending && <FiLoader className="animate-spin" />}
             {mutation.isPending ? "Logging in..." : "Log In"}
-          </Button>
+          </button>
         </form>
 
         <div className="mt-8 text-center">
-          <p className="text-neutral-400 text-sm">
+          <p className="text-sm text-gray-500">
             Don&apos;t have an account?{" "}
             <a
               href="/signup"
-              className="text-white font-semibold hover:underline"
+              className="font-semibold text-gray-900 hover:underline"
             >
               Sign up
             </a>

@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import type { Role, Status } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
@@ -24,6 +24,9 @@ const getSession = async () => {
   }
 };
 
+const isAdminRole = (role: string) =>
+  role === "ADMIN" || role === "SUPER_ADMIN";
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -44,8 +47,8 @@ export async function GET(
       return NextResponse.json({ message: "Invalid user ID" }, { status: 400 });
     }
 
-    // Only Admin or the user themselves can view full details (though GET usually is more permissive in some apps, here we restrict)
-    if (session.role !== "ADMIN" && session.userId !== userId) {
+    // Only an administrator or the user themselves can view full details
+    if (!isAdminRole(session.role) && session.userId !== userId) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
@@ -94,13 +97,13 @@ export async function PUT(
       return NextResponse.json({ message: "Invalid user ID" }, { status: 400 });
     }
 
-    // Only Admin or the user themselves can update
-    if (session.role !== "ADMIN" && session.userId !== userId) {
+    // Only an administrator or the user themselves can update
+    if (!isAdminRole(session.role) && session.userId !== userId) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json();
-    const { name, email, role, oldPassword, newPassword } = body;
+    const { name, email, role, status, oldPassword, newPassword } = body;
 
     const currentUser = await prisma.user.findUnique({
       where: { userId },
@@ -110,16 +113,71 @@ export async function PUT(
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
+    // CDC 2.1: administrator accounts are managed by the super administrator only
+    const sessionIsSuper = session.role === "SUPER_ADMIN";
+    const targetIsAdmin = isAdminRole(currentUser.role);
+    if (targetIsAdmin && !sessionIsSuper && session.userId !== userId) {
+      return NextResponse.json(
+        {
+          message:
+            "Only a super administrator can manage an administrator account",
+        },
+        { status: 403 },
+      );
+    }
+
     const updateData: {
       name?: string;
       email?: string;
       role?: Role;
+      status?: Status;
       password?: string;
     } = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email.toLowerCase();
 
-    if (role && session.role === "ADMIN") {
+    // CDC 3.2: activation and deactivation of accounts
+    if (status) {
+      if (status !== "ACTIVE" && status !== "INACTIVE") {
+        return NextResponse.json(
+          { message: "Invalid status" },
+          { status: 400 },
+        );
+      }
+      if (!isAdminRole(session.role)) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      }
+      if (session.userId === userId) {
+        return NextResponse.json(
+          { message: "You cannot change your own account status" },
+          { status: 400 },
+        );
+      }
+      if (targetIsAdmin && !sessionIsSuper) {
+        return NextResponse.json(
+          {
+            message:
+              "Only a super administrator can manage an administrator account",
+          },
+          { status: 403 },
+        );
+      }
+      updateData.status = status;
+    }
+
+    if (role && role !== currentUser.role) {
+      if (!isAdminRole(session.role)) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      }
+      if ((targetIsAdmin || isAdminRole(role)) && !sessionIsSuper) {
+        return NextResponse.json(
+          {
+            message:
+              "Only a super administrator can grant or change administrator roles",
+          },
+          { status: 403 },
+        );
+      }
       updateData.role = role;
     }
 
@@ -150,6 +208,7 @@ export async function PUT(
         name: true,
         email: true,
         role: true,
+        status: true,
         updatedAt: true,
       },
     });
@@ -173,7 +232,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    if (!session || session.role !== "ADMIN") {
+    if (!session || !isAdminRole(session.role)) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
@@ -182,6 +241,33 @@ export async function DELETE(
 
     if (Number.isNaN(userId)) {
       return NextResponse.json({ message: "Invalid user ID" }, { status: 400 });
+    }
+
+    // CDC 2.1: prevent self-deletion
+    if (session.userId === userId) {
+      return NextResponse.json(
+        { message: "You cannot delete your own account" },
+        { status: 400 },
+      );
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { userId },
+      select: { role: true },
+    });
+    if (!target) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
+    }
+
+    // CDC 2.1: only the super administrator can delete an administrator account
+    if (isAdminRole(target.role) && session.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        {
+          message:
+            "Only a super administrator can delete an administrator account",
+        },
+        { status: 403 },
+      );
     }
 
     await prisma.user.delete({

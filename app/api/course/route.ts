@@ -9,7 +9,12 @@ const courseSchema = z.object({
   code: z.string().min(1, "Code is required"),
   coefficient: z.number().int().min(1, "Coefficient must be at least 1"),
   classIds: z.array(z.number()).optional(),
-  statusCourse: z.nativeEnum(CourseStatus).optional(),
+  statusCourse: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+});
+
+const courseStatusSchema = z.object({
+  id: z.number().int().positive(),
+  statusCourse: z.enum(["ACTIVE", "INACTIVE"]),
 });
 
 export async function GET(req: NextRequest) {
@@ -111,19 +116,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { id, statusCourse } = body as { id: number; statusCourse: string };
-
-    if (
-      !id ||
-      !Object.values(CourseStatus).includes(statusCourse as CourseStatus)
-    ) {
+    const parsed = courseStatusSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
         {
-          error: "Invalid request. 'id' and valid 'statusCourse' are required.",
+          error: "Validation failed",
+          details: parsed.error.flatten().fieldErrors,
         },
         { status: 400 },
       );
     }
+
+    const { id, statusCourse } = parsed.data;
 
     const updatedCourse = await prisma.course.update({
       where: { courseId: id },

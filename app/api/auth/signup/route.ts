@@ -5,7 +5,6 @@ import { SignupFormSchema } from "@/lib/definition";
 import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
-  console.log("post signup runnn..");
   try {
     const body = await req.json();
     const parsed = SignupFormSchema.safeParse(body);
@@ -20,6 +19,14 @@ export async function POST(req: Request) {
     }
 
     const { name, lastname, email, password, contact } = parsed.data;
+
+    const isFirst = await isFirstUser(prisma);
+    if (!isFirst) {
+      return NextResponse.json(
+        { message: "Public registration is closed. Contact an administrator." },
+        { status: 403 },
+      );
+    }
 
     const existingUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -37,7 +44,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const isFirst = await isFirstUser(prisma);
     const role = await determineUserRole(email, prisma);
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -83,14 +89,6 @@ export async function POST(req: Request) {
     return response;
   } catch (error) {
     console.error("Registration error: ", error);
-    console.error(
-      "Error stack:",
-      error instanceof Error ? error.stack : "No stack trace",
-    );
-    console.error(
-      "Error message:",
-      error instanceof Error ? error.message : String(error),
-    );
     return NextResponse.json({ message: "Server error " }, { status: 500 });
   }
 }

@@ -8,7 +8,7 @@ import Form from "@/app/components/ui/Form";
 import Input from "@/app/components/ui/Input";
 import Loading from "@/app/components/ui/Loading";
 import { useUser } from "@/app/context/userContext";
-import type { User } from "../page";
+import type { User } from "../_types";
 
 interface ValidationErrors {
   name?: string[];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Header, MobileDrawer, Sidebar } from "../components/layout";
+import { Footer, Header, MobileDrawer, Sidebar } from "../components/layout";
 import { UserProvider } from "../context/userContext";
 
 export default function UserLayout({
@@ -13,7 +13,7 @@ export default function UserLayout({
 
   return (
     <UserProvider>
-      <div className="min-h-screen bg-gray-300">
+      <div className="min-h-screen graph-paper">
         <Sidebar />
         <MobileDrawer
           isOpen={isMobileMenuOpen}
@@ -23,11 +23,12 @@ export default function UserLayout({
           onToggleMenu={() => setIsMobileMenuOpen((v) => !v)}
           isOpen={isMobileMenuOpen}
         />
-        <main className="pt-16 lg:ml-64 px-1 py-6">
-          <div className="bg-gray-200 text-black min-h-[calc(100vh-8rem)] p-5">
+        <main className="pt-16 lg:ml-64 px-2 py-6 md:px-5">
+          <div className="text-slate-900 min-h-[calc(100vh-8rem)]">
             {children}
           </div>
         </main>
+        <Footer />
       </div>
     </UserProvider>
   );

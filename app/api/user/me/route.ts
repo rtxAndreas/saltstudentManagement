@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 interface JWTPayload {
@@ -9,6 +10,13 @@ interface JWTPayload {
   email: string;
   role: string;
 }
+
+const profileUpdateSchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  email: z.string().trim().email().optional(),
+  oldPassword: z.string().optional(),
+  password: z.string().min(4).optional(),
+});
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -87,16 +95,61 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET) as {
-      userId: number;
-    };
-    const body = await req.json();
-    const { name, email, password } = body;
+    let decoded: { userId: number };
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: number };
+    } catch {
+      return NextResponse.json({ message: "Invalid session" }, { status: 401 });
+    }
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { message: "Invalid JSON body" },
+        { status: 400 },
+      );
+    }
+
+    const parsed = profileUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          message: "Validation failed",
+          errors: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { name, email, oldPassword, password } = parsed.data;
 
     const updateData: { name?: string; email?: string; password?: string } = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email.toLowerCase();
     if (password) {
+      if (!oldPassword) {
+        return NextResponse.json(
+          { message: "Old password is required to set a new password" },
+          { status: 400 },
+        );
+      }
+
+      const currentUser = await prisma.user.findUnique({
+        where: { userId: decoded.userId },
+        select: { password: true },
+      });
+      if (
+        !currentUser ||
+        !(await bcrypt.compare(oldPassword, currentUser.password))
+      ) {
+        return NextResponse.json(
+          { message: "Current password is incorrect" },
+          { status: 400 },
+        );
+      }
+
       updateData.password = await bcrypt.hash(password, 10);
     }
 
