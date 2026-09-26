@@ -1,11 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
+import { useUser } from "../../context/userContext";
 import SchoolYearSelector from "../SchoolYearSelector";
 import Loading from "../ui/Loading";
-import { useUser } from "../../context/userContext";
 
-// Hook isolé ici car utilisé uniquement par Header
 function useIsMounted() {
   return useSyncExternalStore(
     () => () => {},
@@ -26,14 +25,15 @@ export default function Header({ onToggleMenu, isOpen }: HeaderProps) {
   if (!isMounted) return null;
 
   return (
-    <header className="fixed top-0 inset-x-0 z-40 h-16 bg-gray-200 shadow-md flex items-center justify-between px-4 lg:pl-68">
-      
+    <header className="fixed top-0 inset-x-0 z-40 h-16 border-b border-slate-200 bg-white/85 backdrop-blur flex items-center justify-between px-4 shadow-sm lg:pl-68">
       {/* Mobile : hamburger + logo */}
       <div className="flex items-center gap-3 lg:hidden">
         <HamburgerButton isOpen={isOpen} onClick={onToggleMenu} />
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="text-xl">🎟️</span>
-          <span className="font-bold text-red-800">StudentManagement</span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-lg text-white shadow-sm">
+            S
+          </span>
+          <span className="font-bold text-slate-800">StudentManagement</span>
         </Link>
       </div>
 
@@ -49,7 +49,7 @@ export default function Header({ onToggleMenu, isOpen }: HeaderProps) {
           <input
             type="text"
             placeholder="Search..."
-            className="w-full bg-gray-100 border border-gray-300 rounded-lg py-2 pl-9 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 transition"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-700 placeholder-slate-400 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
           />
         </div>
       </div>
@@ -83,9 +83,15 @@ function HamburgerButton({
       aria-label={isOpen ? "Close menu" : "Open menu"}
       className="flex flex-col justify-center items-center w-9 h-9 rounded-lg hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
     >
-      <span className={`block w-5 h-0.5 bg-gray-700 rounded transition-all duration-300 ${isOpen ? "rotate-45 translate-y-1.5" : ""}`} />
-      <span className={`block w-5 h-0.5 bg-gray-700 rounded my-1 transition-all duration-300 ${isOpen ? "opacity-0" : ""}`} />
-      <span className={`block w-5 h-0.5 bg-gray-700 rounded transition-all duration-300 ${isOpen ? "-rotate-45 -translate-y-1.5" : ""}`} />
+      <span
+        className={`block w-5 h-0.5 bg-gray-700 rounded transition-all duration-300 ${isOpen ? "rotate-45 translate-y-1.5" : ""}`}
+      />
+      <span
+        className={`block w-5 h-0.5 bg-gray-700 rounded my-1 transition-all duration-300 ${isOpen ? "opacity-0" : ""}`}
+      />
+      <span
+        className={`block w-5 h-0.5 bg-gray-700 rounded transition-all duration-300 ${isOpen ? "-rotate-45 -translate-y-1.5" : ""}`}
+      />
     </button>
   );
 }
@@ -113,7 +119,7 @@ function UserActions({
       <button
         type="button"
         onClick={onLogout}
-        className="text-sm bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium px-3 py-1.5 rounded-lg transition-colors duration-200"
+        className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 transition-colors duration-200 hover:bg-red-50 hover:text-red-700"
       >
         Logout
       </button>

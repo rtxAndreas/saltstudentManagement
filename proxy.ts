@@ -3,10 +3,51 @@ import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 
 // Define which paths require authentication
-const protectedPaths = ["/dashboard", "/admin", "/client", "/event"];
+const protectedPaths = [
+  "/dashboard",
+  "/period",
+  "/schoolYear",
+  "/users",
+  "/student",
+  "/class",
+  "/course",
+  "/classroom",
+  "/schedule",
+  "/assignment",
+  "/grade",
+  "/settings",
+  "/exams",
+  "/portal",
+  "/finance",
+  "/attendance",
+  "/events",
+  "/assessments",
+  "/reports",
+  "/help",
+];
 
 // Define which paths require ADMIN role
-const adminOnlyPaths = ["/admin", "/events/add", "/events/update"];
+const adminOnlyPaths = [
+  "/admin",
+  "/period/add",
+  "/period/update",
+  "/schoolYear/add",
+  "/schoolYear/update",
+  "/course/add",
+  "/course/update",
+  "/users/add",
+  "/users/update",
+  "/student/add",
+  "/student/update",
+  "/assignment/add",
+  "/assignment/update",
+  "/grade/add",
+  "/grade/update",
+  "/settings/add",
+  "/settings/update",
+  "/exams/add",
+  "/exams/update",
+];
 
 // Define public paths that should skip authentication
 const publicPaths = [
@@ -51,6 +92,23 @@ export async function proxy(
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (
+    (user.role === "STUDENT" || user.role === "PARENT") &&
+    pathname !== "/portal" &&
+    !pathname.startsWith("/portal/") &&
+    pathname !== "/reports" &&
+    !/^\/reports\/\d+$/.test(pathname)
+  ) {
+    return NextResponse.redirect(new URL("/portal", request.url));
+  }
+  if (
+    user.role === "ACCOUNTANT" &&
+    pathname !== "/finance" &&
+    pathname !== "/events"
+  ) {
+    return NextResponse.redirect(new URL("/finance", request.url));
   }
 
   // Check admin access

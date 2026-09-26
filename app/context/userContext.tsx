@@ -16,6 +16,10 @@ interface UserContextType {
   userFormat: User | null;
   isAdmin: boolean;
   isUser: boolean;
+  isInstructor: boolean;
+  isStudent: boolean;
+  isParent: boolean;
+  isAccountant: boolean;
   isLoading: boolean;
   logout: () => void;
 }
@@ -36,8 +40,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       }
     : null;
 
-  const isAdmin = userFormat?.role?.toLocaleLowerCase() === "admin";
-  const isUser = userFormat?.role?.toLocaleLowerCase() === "user";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(userFormat?.role ?? "");
+  const isInstructor = userFormat?.role === "INSTRUCTOR";
+  const isStudent = userFormat?.role === "STUDENT";
+  const isParent = userFormat?.role === "PARENT";
+  const isAccountant = userFormat?.role === "ACCOUNTANT";
+  const isUser = isInstructor;
 
   const logout = async () => {
     try {
@@ -61,7 +69,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UserContext.Provider
-      value={{ userFormat, isAdmin, isUser, isLoading, logout }}
+      value={{
+        userFormat,
+        isAdmin,
+        isUser,
+        isInstructor,
+        isStudent,
+        isParent,
+        isAccountant,
+        isLoading,
+        logout,
+      }}
     >
       {children}
     </UserContext.Provider>

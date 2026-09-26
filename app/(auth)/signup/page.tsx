@@ -4,8 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useState, useTransition } from "react";
-import Button from "@/app/components/ui/Button";
-import Input from "@/app/components/ui/Input";
+import { FiLoader } from "react-icons/fi";
 
 interface ValidationErrors {
   name?: string[];
@@ -43,6 +42,62 @@ const signupUser = async (data: {
   }
   return response.json();
 };
+
+const inputStyles =
+  "w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-900 outline-none transition-all placeholder-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10";
+
+interface Field {
+  id: string;
+  name: string;
+  label: string;
+  type: string;
+  placeholder: string;
+}
+
+const fields: Field[] = [
+  {
+    id: "name",
+    name: "name",
+    label: "First Name",
+    type: "text",
+    placeholder: "John",
+  },
+  {
+    id: "lastname",
+    name: "lastname",
+    label: "Last Name",
+    type: "text",
+    placeholder: "Doe",
+  },
+  {
+    id: "email",
+    name: "email",
+    label: "Email Address",
+    type: "email",
+    placeholder: "name@example.com",
+  },
+  {
+    id: "contact",
+    name: "contact",
+    label: "Contact Number",
+    type: "text",
+    placeholder: "+1234567890",
+  },
+  {
+    id: "password",
+    name: "password",
+    label: "Password",
+    type: "password",
+    placeholder: "••••••••",
+  },
+  {
+    id: "confirmPassword",
+    name: "confirmPassword",
+    label: "Confirm Password",
+    type: "password",
+    placeholder: "••••••••",
+  },
+];
 
 export default function Signup() {
   const router = useRouter();
@@ -106,119 +161,77 @@ export default function Signup() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 p-4">
-      <div className="w-full max-w-md bg-neutral-900 shadow-2xl rounded-3xl p-8 border border-neutral-800">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">
+    <div className="graph-paper flex h-dvh items-center justify-center overflow-hidden px-3 py-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:p-6">
+        <div className="mb-4 text-center sm:mb-5">
+          <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">
             Create Account
           </h1>
-          <p className="text-neutral-400 text-sm">
-            Join us and start managing your events seamlessly.
+          <p className="mt-0.5 text-xs text-gray-500 sm:text-sm">
+            Join us and start managing your school seamlessly.
           </p>
         </div>
 
         {globalError && (
-          <div className="mb-4 px-4 py-3 bg-red-950/30 border border-red-900 rounded-2xl">
-            <p className="text-sm text-red-400">{globalError}</p>
+          <div className="mb-4 rounded-xl border border-red-100 bg-red-50 p-3">
+            <p className="text-sm text-red-600">{globalError}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              label="First Name"
-              placeholder="John"
-              value={formData.name}
-              onChange={handleChange}
-              error={validationErrors.name?.[0]}
-              className="bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500 focus:ring-white"
-              labelClassName="text-neutral-300"
-            />
-
-            <Input
-              id="lastname"
-              name="lastname"
-              type="text"
-              label="Last Name"
-              placeholder="Doe"
-              value={formData.lastname}
-              onChange={handleChange}
-              error={validationErrors.lastname?.[0]}
-              className="bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500 focus:ring-white"
-              labelClassName="text-neutral-300"
-            />
-
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              label="Email Address"
-              placeholder="name@example.com"
-              value={formData.email}
-              onChange={handleChange}
-              error={validationErrors.email?.[0]}
-              className="bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500 focus:ring-white"
-              labelClassName="text-neutral-300"
-            />
-
-            <Input
-              id="contact"
-              name="contact"
-              type="text"
-              label="Contact Number"
-              placeholder="+1234567890"
-              value={formData.contact}
-              onChange={handleChange}
-              error={validationErrors.contact?.[0]}
-              className="bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500 focus:ring-white"
-              labelClassName="text-neutral-300"
-            />
-
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              label="Password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-              error={validationErrors.password?.[0]}
-              className="bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500 focus:ring-white"
-              labelClassName="text-neutral-300"
-            />
-
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              label="Confirm Password"
-              placeholder="••••••••"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              error={validationErrors.confirmPassword?.[0]}
-              className="bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500 focus:ring-white"
-              labelClassName="text-neutral-300"
-            />
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-2 sm:space-y-2.5">
+            {fields.map((field) => {
+              const error =
+                validationErrors[field.name as keyof ValidationErrors]?.[0];
+              return (
+                <div key={field.id} className="space-y-1">
+                  <label
+                    htmlFor={field.id}
+                    className="ml-1 text-xs font-medium text-gray-600 sm:text-sm"
+                  >
+                    {field.label}
+                  </label>
+                  <input
+                    id={field.id}
+                    name={field.name}
+                    type={field.type}
+                    placeholder={field.placeholder}
+                    value={formData[field.name as keyof typeof formData]}
+                    onChange={handleChange}
+                    aria-invalid={Boolean(error)}
+                    className={
+                      error
+                        ? inputStyles +
+                          " border-red-400 focus:border-red-400 focus:ring-red-100"
+                        : inputStyles
+                    }
+                  />
+                  {error && (
+                    <p className="ml-1 text-xs font-medium text-red-500">
+                      {error}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          <Button
+          <button
             type="submit"
-            isLoading={mutation.isPending}
-            className="w-full font-bold py-4 rounded-2xl active:scale-[0.98] transition-all duration-200 shadow-lg"
+            disabled={mutation.isPending}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-2 text-sm font-medium text-white transition-all hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
+            {mutation.isPending && <FiLoader className="animate-spin" />}
             {mutation.isPending ? "Creating account..." : "Sign Up"}
-          </Button>
+          </button>
         </form>
 
-        <div className="mt-8 text-center">
-          <p className="text-neutral-400 text-sm">
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-500">
             Already have an account?{" "}
             <a
               href="/login"
-              className="text-white font-semibold hover:underline"
+              className="font-semibold text-gray-900 hover:underline"
             >
               Log in
             </a>

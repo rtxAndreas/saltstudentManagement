@@ -39,6 +39,14 @@ export async function POST(req: Request) {
       );
     }
 
+    // CDC 3.1: inactive accounts must not be able to sign in
+    if (user.status !== "ACTIVE") {
+      return NextResponse.json(
+        { message: "This account is deactivated. Contact the administration." },
+        { status: 403 },
+      );
+    }
+
     const token = await signToken({
       userId: user.userId,
       email: user.email,
@@ -46,7 +54,7 @@ export async function POST(req: Request) {
     });
 
     const response = NextResponse.json(
-      { message: "Login successful" },
+      { message: "Login successful", role: user.role },
       { status: 200 },
     );
 

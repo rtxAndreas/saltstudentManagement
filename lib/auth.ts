@@ -2,7 +2,13 @@ import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
-export type Role = "ADMIN" | "INSTRUCTOR";
+export type Role =
+  | "SUPER_ADMIN"
+  | "ADMIN"
+  | "ACCOUNTANT"
+  | "INSTRUCTOR"
+  | "STUDENT"
+  | "PARENT";
 
 export interface JWTPayload {
   userId: number;
