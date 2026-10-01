@@ -3,10 +3,18 @@ import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 
 // Define which paths require authentication
-const protectedPaths = ["/dashboard", "/admin", "/client", "/event"];
+const protectedPaths = ["/dashboard", "/period", "/schoolYear", "/users"];
 
 // Define which paths require ADMIN role
-const adminOnlyPaths = ["/admin", "/events/add", "/events/update"];
+const adminOnlyPaths = [
+  "/admin",
+  "/period/add",
+  "/period/update",
+  "/schoolYear/add",
+  "/schoolYear/update",
+  "users/add",
+  "/users/update",
+];
 
 // Define public paths that should skip authentication
 const publicPaths = [
