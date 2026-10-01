@@ -27,11 +27,7 @@ export default function DashboardPage() {
   });
 
   if (isUserLoading || isEventsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loading size={40} message="Loading dashboard..." />
-      </div>
-    );
+    return <Loading skeleton />;
   }
 
   const upcomingEvents = events.filter(

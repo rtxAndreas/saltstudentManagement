@@ -6,22 +6,17 @@ datasource db {
   provider = "sqlite"
 }
 
-
 enum Role {
   ADMIN
   INSTRUCTOR
-}
-enum Status {
-  ACTIVE
-  INACTIVE
 }
 
 model User {
   userId    Int       @id @default(autoincrement())
   name      String
-  lastname String
-  contact String
-  status  Status @default(ACTIVE)
+  lastname  String
+  contact   String
+  status    Status    @default(ACTIVE)
   email     String    @unique
   role      Role      @default(INSTRUCTOR)
   password  String
@@ -64,15 +59,35 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-
-model SchoolYear {
-  schoolYearId Int @id @default(autoincrement())
-  label String
-  startDate DateTime
-  endDate DateTime
-  status Status @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum Status {
+  ACTIVE
+  INACTIVE
 }
 
+model SchoolYear {
+  schoolYearId Int      @id @default(autoincrement())
+  label        String
+  startDate    DateTime
+  endDate      DateTime
+  status       Status   @default(ACTIVE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  periods      Period[]
+}
 
+enum PeriodStatus {
+  DRAFT
+  CLOSED
+}
+
+model Period {
+  periodId     Int          @id @default(autoincrement())
+  label        String
+  startDate    DateTime
+  endDate      DateTime
+  status       PeriodStatus @default(DRAFT)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  schoolYearId Int
+  schoolYear   SchoolYear   @relation(fields: [schoolYearId], references: [schoolYearId])
+}

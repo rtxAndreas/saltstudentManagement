@@ -3,30 +3,30 @@
 import { useEffect } from "react";
 import { FiAlertCircle, FiCheckCircle, FiRefreshCw } from "react-icons/fi";
 import Loading from "../../components/ui/Loading";
-import { SchoolYearList } from "./_components/SchoolYearList";
-import { SchoolYearForm } from "./_components/ShoolYearForm";
-import { useSchoolYears } from "./_hooks/useSchoolYear";
+import { PeriodForm } from "./_components/PeriodForm";
+import { PeriodList } from "./_components/PeriodList";
+import { usePeriods } from "./_hooks/usePeriod";
 
-export default function SchoolYearPage() {
+export default function PeriodPage() {
   const {
-    schoolYears,
+    periods,
     loading,
     error,
     success,
     setError,
     setSuccess,
-    fetchSchoolYears,
+    fetchPeriods,
     handleRefresh,
     handleCreate,
     handleDelete,
-    handleActivate,
-  } = useSchoolYears();
+    handleToggleStatus,
+  } = usePeriods();
 
   useEffect(() => {
-    fetchSchoolYears();
-  }, [fetchSchoolYears]);
+    fetchPeriods();
+  }, [fetchPeriods]);
 
-  if (loading && schoolYears.length === 0) {
+  if (loading && periods.length === 0) {
     return <Loading skeleton />;
   }
 
@@ -37,10 +37,10 @@ export default function SchoolYearPage() {
         <div className="flex items-start justify-between gap-6">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">
-              School year management
+              Academic period management
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Define and manage academic cycles.
+              Define and manage periods within academic years.
             </p>
           </div>
           <button
@@ -85,14 +85,14 @@ export default function SchoolYearPage() {
 
         {/* Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
-          <SchoolYearForm
+          <PeriodForm
             onSubmit={handleCreate}
             onError={(msg) => setError(msg)}
           />
-          <SchoolYearList
-            years={schoolYears}
+          <PeriodList
+            periods={periods}
             loading={loading}
-            onActivate={handleActivate}
+            onToggleStatus={handleToggleStatus}
             onDelete={handleDelete}
           />
         </div>

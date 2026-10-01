@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import Button from "@/app/components/ui/Button";
+import Loading from "@/app/components/ui/Loading";
 import Table from "@/app/components/ui/Table";
 import { useUser } from "@/app/context/userContext";
 
@@ -46,6 +47,10 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
+
+  if (isLoading && users.length === 0) {
+    return <Loading skeleton />;
+  }
 
   const filteredUsers = isAdmin
     ? users

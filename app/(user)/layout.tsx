@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { UserProvider } from "../context/userContext";
 import { Header, MobileDrawer, Sidebar } from "../components/layout";
-
+import { UserProvider } from "../context/userContext";
 
 export default function UserLayout({
   children,

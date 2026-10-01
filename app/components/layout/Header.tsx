@@ -1,11 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
+import { useUser } from "../../context/userContext";
 import SchoolYearSelector from "../SchoolYearSelector";
 import Loading from "../ui/Loading";
-import { useUser } from "../../context/userContext";
 
-// Hook isolé ici car utilisé uniquement par Header
 function useIsMounted() {
   return useSyncExternalStore(
     () => () => {},
@@ -27,7 +26,6 @@ export default function Header({ onToggleMenu, isOpen }: HeaderProps) {
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 h-16 bg-gray-200 shadow-md flex items-center justify-between px-4 lg:pl-68">
-      
       {/* Mobile : hamburger + logo */}
       <div className="flex items-center gap-3 lg:hidden">
         <HamburgerButton isOpen={isOpen} onClick={onToggleMenu} />
@@ -83,9 +81,15 @@ function HamburgerButton({
       aria-label={isOpen ? "Close menu" : "Open menu"}
       className="flex flex-col justify-center items-center w-9 h-9 rounded-lg hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
     >
-      <span className={`block w-5 h-0.5 bg-gray-700 rounded transition-all duration-300 ${isOpen ? "rotate-45 translate-y-1.5" : ""}`} />
-      <span className={`block w-5 h-0.5 bg-gray-700 rounded my-1 transition-all duration-300 ${isOpen ? "opacity-0" : ""}`} />
-      <span className={`block w-5 h-0.5 bg-gray-700 rounded transition-all duration-300 ${isOpen ? "-rotate-45 -translate-y-1.5" : ""}`} />
+      <span
+        className={`block w-5 h-0.5 bg-gray-700 rounded transition-all duration-300 ${isOpen ? "rotate-45 translate-y-1.5" : ""}`}
+      />
+      <span
+        className={`block w-5 h-0.5 bg-gray-700 rounded my-1 transition-all duration-300 ${isOpen ? "opacity-0" : ""}`}
+      />
+      <span
+        className={`block w-5 h-0.5 bg-gray-700 rounded transition-all duration-300 ${isOpen ? "-rotate-45 -translate-y-1.5" : ""}`}
+      />
     </button>
   );
 }
